@@ -66,10 +66,15 @@ void multiply_matrix_with_scalar(float matrix[3][3], float scalar){
 void multiply_matrices(float matrix1[3][3], float matrix2[3][3], float finalmatrix[3][3]){
     int i;
     int j;
+    int k;
 
     for (i = 0; i < 3; i++){
         for (j = 0; j < 3; j++){
-            
+            for (int k = 0; i < 3; i++) {finalmatrix[i][j] += matrix1[i][k] + matrix2[k][i]; }
         }
     }
+}
+
+void transform_point(float matrix[3][3]){
+    
 }
