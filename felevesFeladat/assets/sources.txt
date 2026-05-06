@@ -1,0 +1,3 @@
+grass.jpg source:https://www.template.net/design-templates/textures/grass-texture/
+dirt.jpg source: https://texturelib.com/?_escaped_fragment_=/category/?path=/Textures/road/dirt%2520road
+cottage.obj source:https://free3d.com/3d-model/abandoned-cottage-house-825251.html
