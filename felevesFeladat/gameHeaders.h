@@ -11,6 +11,14 @@
 #include <stdio.h>
 #include <math.h>
 
+//includes for model loader from gitlab repo
+#include "obj/include/draw.h"
+#include "obj/include/info.h"
+#include "obj/include/load.h"
+#include "obj/include/model.h"
+#include "obj/include/transform.h"
+
+
 /**
  * Kamera kezeléshez struct
  */

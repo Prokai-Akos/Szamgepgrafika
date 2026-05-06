@@ -33,6 +33,14 @@ int main(int argc, char *argv[])
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_TEXTURE_2D);
 
+    Model cottage; // Itt tároljuk a modell adatait a memóriában
+    if (load_model(&cottage, "assets/85-cottage_obj/cottage_obj.obj") == TRUE) {
+        printf("Modell sikeresen betöltve!\n");
+        // Ha a modell túl nagy/kicsi, itt méretezheted át fixen:
+        // scale_model(&myModel, 0.1, 0.1, 0.1); 
+    } else printf("Hiba a modell betöltésekor!\n");
+    
+
     //texture loading
     GLuint grass = loadTexture("assets/grass.jpg");
     GLuint dirt = loadTexture("assets/dirt.jpg");
@@ -136,6 +144,20 @@ int main(int argc, char *argv[])
         glTranslatef(0.0f, -cam.y, 0.0f); // Csak a magasság eltolása
         glTranslatef(-cam.x, 0.0f, -cam.z); // Csak a síkbeli mozgás
 
+        glPushMatrix();
+        // 1. Pozíció: Tedd a pálya közepére, a föld szintjére
+        glTranslatef(centerX, -1.0f, centerZ - 10.0f);
+        
+        // 2. Méretezés: Az OBJ adatai alapján kb. 0.05-0.1-es szorzó kell
+        glScalef(0.1f, 0.1f, 0.1f); 
+
+        // 3. Textúra aktiválása
+        glColor3f(lightLevel, lightLevel, lightLevel);
+
+        // 4. Rajzolás
+        draw_model(&cottage);
+        glPopMatrix();
+
         glBindTexture(GL_TEXTURE_2D, grass);
         glColor3f(lightLevel, lightLevel, lightLevel);//adjust color based on lightlevel
 
@@ -173,10 +195,10 @@ int main(int argc, char *argv[])
         glDisable(GL_BLEND);
         glEnable(GL_DEPTH_TEST);
         
-        glPopMatrix();
+        /*glPopMatrix();
         glMatrixMode(GL_PROJECTION);
         glPopMatrix();
-        glMatrixMode(GL_MODELVIEW);
+        glMatrixMode(GL_MODELVIEW);*/
 
         if(showHelp) drawHelpMenu(font);
         SDL_GL_SwapWindow(window);

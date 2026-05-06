@@ -1,2 +1,3 @@
 linux:
-	gcc main.c -o uaz.exe $(shell pkg-config --cflags --libs sdl2) -lGL -lGLU -lm -lSDL2_image -lSDL2_ttf
+	cd obj && make
+	gcc main.c -o uaz.exe $(shell pkg-config --cflags --libs sdl2) -Iobj/include/ obj/libobj.a -lGL -lGLU -lm -lSDL2_image -lSDL2_ttf
