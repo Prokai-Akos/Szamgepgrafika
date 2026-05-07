@@ -18,7 +18,6 @@
 #include "obj/include/model.h"
 #include "obj/include/transform.h"
 
-
 /**
  * Kamera kezeléshez struct
  */
@@ -53,7 +52,7 @@ static double pi = 3.14159265358979323846;
  * texture loader, static so if i add it to more files the compiler wont kill itself
  */
 static GLuint loadTexture(const char* filename) {
-    SDL_Surface* surface = IMG_Load(filename);
+    /*SDL_Surface* surface = IMG_Load(filename);
     if (!surface) {
         printf("Failed to load image: %s\n", IMG_GetError());
         return 0;
@@ -73,6 +72,40 @@ static GLuint loadTexture(const char* filename) {
     int mode = (surface->format->BytesPerPixel == 4) ? GL_RGBA : GL_RGB;
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);// Force OpenGL to read pixels byte-by-byte, ignoring 4-byte row alignment
     glTexImage2D(GL_TEXTURE_2D, 0, mode, surface->w, surface->h, 0, mode, GL_UNSIGNED_BYTE, surface->pixels);
+
+    SDL_FreeSurface(surface);
+    return textureID;*/
+
+    SDL_Surface* loadedSurf = IMG_Load(filename);
+    if (!loadedSurf) {
+        printf("Failed to load image: %s\n", IMG_GetError());
+        return 0;
+    }
+
+    // Meghatározzuk a módot a betöltött kép alapján
+    int mode = (loadedSurf->format->BytesPerPixel == 4) ? GL_RGBA : GL_RGB;
+
+    // Kényszerítsük a formátumot, hogy Windowson ne csússzanak el a színek
+    SDL_Surface* surface = SDL_ConvertSurfaceFormat(loadedSurf, SDL_PIXELFORMAT_ABGR8888, 0);
+    SDL_FreeSurface(loadedSurf); // Az eredetit már törölhetjük
+
+    if (!surface) return 0;
+
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+    // Mipmap építése (Figyelem: mivel kényszerítettük az ABGR-t, 
+    // az OpenGL felé itt fixen GL_RGBA-t küldünk!)
+    gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGBA, surface->w, surface->h, GL_RGBA, GL_UNSIGNED_BYTE, surface->pixels);
+
+    // Szűrés beállítása
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
     SDL_FreeSurface(surface);
     return textureID;
@@ -129,28 +162,36 @@ static void drawHelpMenu(TTF_Font* font) {
     glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
     
     const char* lines[] = {
-        "HASZNALATI UTMUTATO",
+        "Help menu",
         "-------------------",
-        "- W,A,S,D: Mozgas",
-        "- L-CTRL: Gugolas",
-        "- EGER: Nezegetes",
-        "- F1: Sugo bezarasa",
-        "- ESC: Kilepes"
+        "- W,A,S,D: movement",
+        "- L-CTRL: crouch",
+        "- MOUSE: Look around",
+        "- F1: help menu",
+        "- ESC: exit"
     };
 
     int startY = 100;
     for (int i = 0; i < 7; i++) {
+        SDL_Color white = {255, 255, 255, 255};
+        SDL_Surface* tempSurf = TTF_RenderUTF8_Blended(font, lines[i], white);
+        if (!tempSurf) continue;
+
+        int textW = tempSurf->w;
+        int textH = tempSurf->h;
+
         GLuint tex = textToTexture(font, lines[i]);
         
-        // Use a standard height for lines, or get w/h from surface if preferred
         glBindTexture(GL_TEXTURE_2D, tex);
+        
         glBegin(GL_QUADS);
             glTexCoord2f(0, 0); glVertex2f(100, startY + (i * 40));
-            glTexCoord2f(1, 0); glVertex2f(400, startY + (i * 40));
-            glTexCoord2f(1, 1); glVertex2f(400, startY + 35 + (i * 40));
-            glTexCoord2f(0, 1); glVertex2f(100, startY + 35 + (i * 40));
+            glTexCoord2f(1, 0); glVertex2f(100 + textW, startY + (i * 40));
+            glTexCoord2f(1, 1); glVertex2f(100 + textW, startY + textH + (i * 40));
+            glTexCoord2f(0, 1); glVertex2f(100, startY + textH + (i * 40));
         glEnd();
         
+        SDL_FreeSurface(tempSurf);
         glDeleteTextures(1, &tex);
     }
 
@@ -228,6 +269,47 @@ static void displayParticles(Camera cam){
     glDisable(GL_BLEND);
     glEnable(GL_TEXTURE_2D);
     glColor3f(1.0f, 1.0f, 1.0f);
+}
+
+/**
+ * Used for checking the bounding box at the border of the map
+ */
+static float clamp(float n, float min, float max) {
+  if (n < min) return min;
+  if (n > max) return max;
+  return n;
+}
+
+/**
+ * Ütközésvizsgálat egy kör alapú objektummal.
+ * Figyelembe veszi a guggolást: ha a kamera alacsonyan van, 
+ * csak a törzzsel (trunk) ütközik, ha magasan, akkor a lombbal (foliage) is.
+ */
+static void applyTreeCollision(Camera* cam, float treeX, float treeZ) {
+    // Hitbox paraméterek
+    float trunkRadius = 0.3f;      // A törzs, aminek sosem megyünk neki
+    float foliageRadius = 1.6f;    // A lomb, ami állva útban van
+    float foliageHeightLimit = -0.3f; // E felett számít a lomb (guggolás határ)
+
+    // Távolság számítása (Pitagorasz-tétel)
+    float dx = cam->x - treeX;
+    float dz = cam->z - treeZ;
+    float distance = sqrtf(dx * dx + dz * dz);
+
+    // Meghatározzuk, melyik hitbox érvényes most
+    float activeRadius = trunkRadius;
+    if (cam->y > foliageHeightLimit) {
+        activeRadius = foliageRadius;
+    }
+
+    // Ha közelebb vagyunk, mint a sugár, "kilökjük" a kamerát
+    if (distance < activeRadius && distance > 0.001f) {
+        float overlap = activeRadius - distance;
+        
+        // Az eltolás iránya (normalizált vektor * overlap)
+        cam->x += (dx / distance) * overlap;
+        cam->z += (dz / distance) * overlap;
+    }
 }
 
 #endif

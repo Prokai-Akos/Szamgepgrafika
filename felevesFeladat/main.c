@@ -9,15 +9,15 @@ int main(int argc, char *argv[])
     }
 
     if (TTF_Init() == -1) printf("TTF_Init error: %s\n", TTF_GetError());
-
-    TTF_Font* font = TTF_OpenFont("assets/computer-font/Computer-z2aL.ttf", 24); // Make sure you have a .ttf file!
+    TTF_Font* font = TTF_OpenFont("assets/Roboto-VariableFont_wdth,wght.ttf", 24); // Make sure you have a .ttf file!
     if (!font) printf("Font load error: %s\n", TTF_GetError());
 
     SDL_Window *window = SDL_CreateWindow(
         "Leendő játék",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         800, 600,
-        SDL_WINDOW_OPENGL);
+        SDL_WINDOW_OPENGL
+    );
 
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_SetSwapInterval(1); // 1 = Enable VSync, 0 = Disable
@@ -28,22 +28,20 @@ int main(int argc, char *argv[])
     glLoadIdentity();
     // FOV, Aspect Ratio, Near Clip, Far Clip
     gluPerspective(45.0, 800.0 / 600.0, 0.1, 100.0);
-
     glMatrixMode(GL_MODELVIEW);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_TEXTURE_2D);
 
-    Model cottage; // Itt tároljuk a modell adatait a memóriában
-    if (load_model(&cottage, "assets/85-cottage_obj/cottage_obj.obj") == TRUE) {
+    Model tree; // Itt tároljuk a modell adatait a memóriában
+    if (load_model(&tree, "assets/tree/tree.obj")) {
         printf("Modell sikeresen betöltve!\n");
-        // Ha a modell túl nagy/kicsi, itt méretezheted át fixen:
-        // scale_model(&myModel, 0.1, 0.1, 0.1); 
+        scale_model(&tree, 2.0, 2.0, 2.0); 
     } else printf("Hiba a modell betöltésekor!\n");
     
-
     //texture loading
     GLuint grass = loadTexture("assets/grass.jpg");
     GLuint dirt = loadTexture("assets/dirt.jpg");
+    GLuint spruceTexture = loadTexture("assets/tree/tree-nonopaque.png");
     //enableFog();
     glClearColor(0.5f, 0.8f, 1.0f, 1.0f); //clear sky
     //glClearColor(0.5f,0.5f,0.5f,0.5f);//foggy sky
@@ -58,7 +56,7 @@ int main(int argc, char *argv[])
     const Uint8 *state = SDL_GetKeyboardState(NULL);//állandó gomblenyomásos mozgásű
     bool showHelp = false;
     float lightLevel = 0.5f; //0.0-1.0 között legyen
-
+    int treeCount = 10;
 
     while (need_run){
         float rad = cam.yaw * (pi / 180.0f);
@@ -112,7 +110,10 @@ int main(int argc, char *argv[])
         }
 
         //gugolás implementáció
-        if (state[SDL_SCANCODE_LCTRL]) cam.y = crouchHeight; 
+        if (state[SDL_SCANCODE_LCTRL]){
+            cam.y = crouchHeight; 
+            speed = speed * 0.5;
+        } 
         else cam.y = normalHeight;
 
         //wasd mozgás
@@ -132,10 +133,23 @@ int main(int argc, char *argv[])
             cam.x += cosf(rad) * speed;
             cam.z += sinf(rad) * speed;
         }
+        if (cam.x < 10.0f || cam.z < 10.0f) {
+            enableFog();
+            glClearColor(0.5f, 0.5f, 0.5f, 0.5f); 
+        } else {
+            glDisable(GL_FOG); 
+            glClearColor(0.5f, 0.8f, 1.0f, 1.0f); 
+        }
+
+        //Collision detection with trees
+        applyTreeCollision(&cam, centerX, centerZ - 10.0f);
+        for(int i = 0; i < treeCount; i++) applyTreeCollision(&cam, centerX + (i * 4) + 5, centerZ - 5.0f + (i * 2));
+
+        cam.x = clamp(cam.x, 0.5f, (WIDTH * tileSize) - 0.5f);
+        cam.z = clamp(cam.z, 0.5f, (HEIGHT * tileSize) - 0.5f);
 
         // Scene render
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
         glLoadIdentity();
         
         // kamera transzformációk
@@ -143,20 +157,34 @@ int main(int argc, char *argv[])
         glRotatef(cam.yaw, 0.0f, 1.0f, 0.0f);
         glTranslatef(0.0f, -cam.y, 0.0f); // Csak a magasság eltolása
         glTranslatef(-cam.x, 0.0f, -cam.z); // Csak a síkbeli mozgás
-
-        glPushMatrix();
-        // 1. Pozíció: Tedd a pálya közepére, a föld szintjére
-        glTranslatef(centerX, -1.0f, centerZ - 10.0f);
-        
-        // 2. Méretezés: Az OBJ adatai alapján kb. 0.05-0.1-es szorzó kell
-        glScalef(0.1f, 0.1f, 0.1f); 
-
-        // 3. Textúra aktiválása
         glColor3f(lightLevel, lightLevel, lightLevel);
 
-        // 4. Rajzolás
-        draw_model(&cottage);
+        //fa kirajzolások
+        // fix fa
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glEnable(GL_ALPHA_TEST);
+        glBindTexture(GL_TEXTURE_2D, spruceTexture);
+        glEnable(GL_ALPHA_TEST); //ne mosódjon el a fa széle annyira (másképp a clearcolor-t kapja)
+        glAlphaFunc(GL_GREATER, 0.5f); 
+
+        glPushMatrix();
+            glTranslatef(centerX, -1.0f, centerZ - 10.0f);
+            draw_model(&tree);
         glPopMatrix();
+
+        // forest maker
+        for(int i = 0; i < treeCount; i++) {
+            glPushMatrix();
+                glTranslatef(centerX + (i * 4) + 5, -1.1f, centerZ - 5.0f + (i * 2));
+                glRotatef(i * 45, 0, 1, 0);
+                draw_model(&tree);
+            glPopMatrix();
+        }
+
+        // Most kapcsoljuk ki, miután az összes fát kirajzoltuk
+        glDisable(GL_ALPHA_TEST);
+        glDisable(GL_BLEND);
 
         glBindTexture(GL_TEXTURE_2D, grass);
         glColor3f(lightLevel, lightLevel, lightLevel);//adjust color based on lightlevel
@@ -164,7 +192,7 @@ int main(int argc, char *argv[])
         for (int i = 0; i < WIDTH; i++) {
             for (int j = 0; j < HEIGHT; j++) {
                 
-                // Pick the texture based on the array value
+                //tileMap alapján választja a textúrát
                 if (tileMap[i][j] == 0)      glBindTexture(GL_TEXTURE_2D, grass);
                 else if (tileMap[i][j] == 1) glBindTexture(GL_TEXTURE_2D, dirt);
 
@@ -181,7 +209,6 @@ int main(int argc, char *argv[])
 
         displayParticles(cam);
 
-
         // példa háromszög
         glBegin(GL_TRIANGLES);
         glColor3f(1, 0, 0);
@@ -194,11 +221,9 @@ int main(int argc, char *argv[])
 
         glDisable(GL_BLEND);
         glEnable(GL_DEPTH_TEST);
-        
-        /*glPopMatrix();
-        glMatrixMode(GL_PROJECTION);
-        glPopMatrix();
-        glMatrixMode(GL_MODELVIEW);*/
+
+        printf("X: %6.2f | Y: %6.2f | Z: %6.2f\r", cam.x, cam.y, cam.z);
+        fflush(stdout);
 
         if(showHelp) drawHelpMenu(font);
         SDL_GL_SwapWindow(window);
