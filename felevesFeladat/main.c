@@ -1,5 +1,4 @@
 #include "gameHeaders.h"
-#include "map.h"
 
 int main(int argc, char *argv[])
 {
@@ -13,7 +12,7 @@ int main(int argc, char *argv[])
     if (!font) printf("Font load error: %s\n", TTF_GetError());
 
     SDL_Window *window = SDL_CreateWindow(
-        "Leendő játék",
+        "Countryside adventure",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         800, 600,
         SDL_WINDOW_OPENGL
@@ -34,29 +33,48 @@ int main(int argc, char *argv[])
 
     Model tree; // Itt tároljuk a modell adatait a memóriában
     if (load_model(&tree, "assets/tree/tree.obj")) {
-        printf("Modell sikeresen betöltve!\n");
+        printf("Tree model loaded successfully!!\n");
         scale_model(&tree, 2.0, 2.0, 2.0); 
-    } else printf("Hiba a modell betöltésekor!\n");
+    } else printf("Failed to load tree model!\n");
+
+    Model cardboardBox;
+    if(load_model(&cardboardBox, "assets/box/carboard-box.obj")){
+        printf("Cardboard box model loaded successfully!\n");
+        scale_model(&cardboardBox, 0.2, 0.2, 0.2); 
+    } else printf("Failed to load cardboard box model!\n");
     
     //texture loading
     GLuint grass = loadTexture("assets/grass.jpg");
     GLuint dirt = loadTexture("assets/dirt.jpg");
+    GLuint stoneWall = loadTexture("assets/stoneWall.jpg");
     GLuint spruceTexture = loadTexture("assets/tree/tree-nonopaque.png");
+    GLuint cardboardTexture = loadTexture("assets/box/cardboard.jpg");
+    
     //enableFog();
     glClearColor(0.5f, 0.8f, 1.0f, 1.0f); //clear sky
     //glClearColor(0.5f,0.5f,0.5f,0.5f);//foggy sky
     initParticles();
+    initTrees();
 
     float tileSize = 1.0f;
     float centerX = (WIDTH * tileSize) / 2.0f;
     float centerZ = (HEIGHT * tileSize) / 2.0f;
-    Camera cam = {centerX, 0.0f, centerZ, 0.0f, 0.0f}; // map közepi start
+    float startX = 50.5;
+    float startZ = 79.5;
+    //Camera cam = {centerX, 0.0f, centerZ, 0.0f, 0.0f}; // map közepi start
+    Camera cam = {startX, 0.0f, startZ, 0.0f, 0.0f};// map széli start
     bool need_run = true;
     SDL_Event event;
     const Uint8 *state = SDL_GetKeyboardState(NULL);//állandó gomblenyomásos mozgásű
     bool showHelp = false;
     float lightLevel = 0.5f; //0.0-1.0 között legyen
     int treeCount = 10;
+    float boxX, boxZ;
+    bool boxPickedUp = false;
+    srand(time(NULL));
+    boxX = (float)(rand() % 20) + 1.0f; // 1 és 21 közötti random koordináta
+    boxZ = (float)(rand() % 20) + 1.0f; 
+    printf(" Box generated: X: %.2f, Z: %.2f\n", boxX, boxZ);
 
     while (need_run){
         float rad = cam.yaw * (pi / 180.0f);
@@ -65,11 +83,7 @@ int main(int argc, char *argv[])
         float normalHeight = 0.0f;  // alap eye-level
         float crouchHeight = -0.6f; // gugolós eye-level
         float bobbingHeight = 0.1f; // view bobbingos
-
-        if ((state[SDL_SCANCODE_W] || state[SDL_SCANCODE_S]) && (state[SDL_SCANCODE_A] || state[SDL_SCANCODE_D])) 
-            speed = speed * 0.7071f; // 1 / sqrt(2)
         
-
         while (SDL_PollEvent(&event)){
             if (event.type == SDL_QUIT)
                 need_run = false;
@@ -133,7 +147,10 @@ int main(int argc, char *argv[])
             cam.x += cosf(rad) * speed;
             cam.z += sinf(rad) * speed;
         }
-        if (cam.x < 10.0f || cam.z < 10.0f) {
+        //diagonális mozgás
+        if ((state[SDL_SCANCODE_W] || state[SDL_SCANCODE_S]) && (state[SDL_SCANCODE_A] || state[SDL_SCANCODE_D])) 
+            speed = speed * 0.7071f; // 1 / sqrt(2)
+        if (cam.x < 30.0f || cam.z < 30.0f) {
             enableFog();
             glClearColor(0.5f, 0.5f, 0.5f, 0.5f); 
         } else {
@@ -141,17 +158,13 @@ int main(int argc, char *argv[])
             glClearColor(0.5f, 0.8f, 1.0f, 1.0f); 
         }
 
-        //Collision detection with trees
-        applyTreeCollision(&cam, centerX, centerZ - 10.0f);
-        for(int i = 0; i < treeCount; i++) applyTreeCollision(&cam, centerX + (i * 4) + 5, centerZ - 5.0f + (i * 2));
-
         cam.x = clamp(cam.x, 0.5f, (WIDTH * tileSize) - 0.5f);
         cam.z = clamp(cam.z, 0.5f, (HEIGHT * tileSize) - 0.5f);
 
         // Scene render
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glLoadIdentity();
-        
+
         // kamera transzformációk
         glRotatef(cam.pitch, 1.0f, 0.0f, 0.0f);
         glRotatef(cam.yaw, 0.0f, 1.0f, 0.0f);
@@ -159,34 +172,11 @@ int main(int argc, char *argv[])
         glTranslatef(-cam.x, 0.0f, -cam.z); // Csak a síkbeli mozgás
         glColor3f(lightLevel, lightLevel, lightLevel);
 
-        //fa kirajzolások
-        // fix fa
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glEnable(GL_ALPHA_TEST);
-        glBindTexture(GL_TEXTURE_2D, spruceTexture);
-        glEnable(GL_ALPHA_TEST); //ne mosódjon el a fa széle annyira (másképp a clearcolor-t kapja)
-        glAlphaFunc(GL_GREATER, 0.5f); 
+        drawBackgroundWalls(stoneWall, lightLevel);
 
-        glPushMatrix();
-            glTranslatef(centerX, -1.0f, centerZ - 10.0f);
-            draw_model(&tree);
-        glPopMatrix();
+        drawTrees(&tree, spruceTexture, treeCount, centerX, centerZ, &cam);
+        boxPickedUp = generateBox(&cardboardBox, cardboardTexture, boxX, boxZ, boxPickedUp, cam, lightLevel);
 
-        // forest maker
-        for(int i = 0; i < treeCount; i++) {
-            glPushMatrix();
-                glTranslatef(centerX + (i * 4) + 5, -1.1f, centerZ - 5.0f + (i * 2));
-                glRotatef(i * 45, 0, 1, 0);
-                draw_model(&tree);
-            glPopMatrix();
-        }
-
-        // Most kapcsoljuk ki, miután az összes fát kirajzoltuk
-        glDisable(GL_ALPHA_TEST);
-        glDisable(GL_BLEND);
-
-        glBindTexture(GL_TEXTURE_2D, grass);
         glColor3f(lightLevel, lightLevel, lightLevel);//adjust color based on lightlevel
 
         for (int i = 0; i < WIDTH; i++) {
@@ -205,19 +195,8 @@ int main(int argc, char *argv[])
             }
         }
 
-        glBindTexture(GL_TEXTURE_2D, 0); // Unbind so the triangle doesn't get textured
-
+        glBindTexture(GL_TEXTURE_2D, 0);
         displayParticles(cam);
-
-        // példa háromszög
-        glBegin(GL_TRIANGLES);
-        glColor3f(1, 0, 0);
-        glVertex3f(centerX -1.0f, -1.0f, centerZ - 0.5f);
-        glColor3f(0, 1, 0);
-        glVertex3f(centerX + 1.0f, -1.5f, centerZ- 0.5f);
-        glColor3f(0, 0, 1);
-        glVertex3f(centerX, 1.0f, centerZ - 0.5f);
-        glEnd();
 
         glDisable(GL_BLEND);
         glEnable(GL_DEPTH_TEST);

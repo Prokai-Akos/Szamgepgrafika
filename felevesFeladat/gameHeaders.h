@@ -10,8 +10,10 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <math.h>
+#include <time.h>
 
 //includes for model loader from gitlab repo
+#include "map.h"
 #include "obj/include/draw.h"
 #include "obj/include/info.h"
 #include "obj/include/load.h"
@@ -36,8 +38,19 @@ typedef struct {
     float life;//lifetime
 } Particle;
 
+typedef struct {
+    float x;
+    float z;
+} Tree;
+
 #define maxParticle 600
 static Particle particles[maxParticle];
+
+#define maxTrees 200
+static Tree forest[maxTrees];
+
+int mapseed = 67;
+
 
 
 /**
@@ -52,29 +65,6 @@ static double pi = 3.14159265358979323846;
  * texture loader, static so if i add it to more files the compiler wont kill itself
  */
 static GLuint loadTexture(const char* filename) {
-    /*SDL_Surface* surface = IMG_Load(filename);
-    if (!surface) {
-        printf("Failed to load image: %s\n", IMG_GetError());
-        return 0;
-    }
-
-    GLuint textureID;
-    glGenTextures(1, &textureID);
-    glBindTexture(GL_TEXTURE_2D, textureID);
-
-    // Set texture parameters (Wrapping and Filtering)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-    // Upload data to GPU
-    int mode = (surface->format->BytesPerPixel == 4) ? GL_RGBA : GL_RGB;
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);// Force OpenGL to read pixels byte-by-byte, ignoring 4-byte row alignment
-    glTexImage2D(GL_TEXTURE_2D, 0, mode, surface->w, surface->h, 0, mode, GL_UNSIGNED_BYTE, surface->pixels);
-
-    SDL_FreeSurface(surface);
-    return textureID;*/
 
     SDL_Surface* loadedSurf = IMG_Load(filename);
     if (!loadedSurf) {
@@ -82,12 +72,9 @@ static GLuint loadTexture(const char* filename) {
         return 0;
     }
 
-    // Meghatározzuk a módot a betöltött kép alapján
     int mode = (loadedSurf->format->BytesPerPixel == 4) ? GL_RGBA : GL_RGB;
-
-    // Kényszerítsük a formátumot, hogy Windowson ne csússzanak el a színek
     SDL_Surface* surface = SDL_ConvertSurfaceFormat(loadedSurf, SDL_PIXELFORMAT_ABGR8888, 0);
-    SDL_FreeSurface(loadedSurf); // Az eredetit már törölhetjük
+    SDL_FreeSurface(loadedSurf);
 
     if (!surface) return 0;
 
@@ -135,7 +122,11 @@ static GLuint textToTexture(TTF_Font* font, const char* text) {
     return textureID;
 }
 
+/*
+*Used for displaying the help menu
+*/
 static void drawHelpMenu(TTF_Font* font) {
+    //AI was used to help write this
     // 1. Switch to 2D
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
@@ -168,11 +159,12 @@ static void drawHelpMenu(TTF_Font* font) {
         "- L-CTRL: crouch",
         "- MOUSE: Look around",
         "- F1: help menu",
-        "- ESC: exit"
+        "- ESC: exit",
+        "- + - : set light level"
     };
 
     int startY = 100;
-    for (int i = 0; i < 7; i++) {
+    for (int i = 0; i < 8; i++) {
         SDL_Color white = {255, 255, 255, 255};
         SDL_Surface* tempSurf = TTF_RenderUTF8_Blended(font, lines[i], white);
         if (!tempSurf) continue;
@@ -205,8 +197,7 @@ static void drawHelpMenu(TTF_Font* font) {
 }
 
 /**
- * Blindness effect-nek felhasználható lesz majd, esetleg a kuplungért be kell menni
- * egy házba ahol sötét lesz és ott megkeresni sötétben?
+ * Enables fog and changes clearColor to fog color
  */
 static void enableFog(){
     GLfloat fogColor[4] = {0.5f,0.5f,0.5f,0.5f};
@@ -287,29 +278,130 @@ static float clamp(float n, float min, float max) {
  */
 static void applyTreeCollision(Camera* cam, float treeX, float treeZ) {
     // Hitbox paraméterek
-    float trunkRadius = 0.3f;      // A törzs, aminek sosem megyünk neki
-    float foliageRadius = 1.6f;    // A lomb, ami állva útban van
-    float foliageHeightLimit = -0.3f; // E felett számít a lomb (guggolás határ)
+    float trunkRadius = 0.4f;
+    float foliageRadius = 1.8f;    
+    float foliageHeightLimit = -0.3f;
 
-    // Távolság számítása (Pitagorasz-tétel)
     float dx = cam->x - treeX;
     float dz = cam->z - treeZ;
     float distance = sqrtf(dx * dx + dz * dz);
 
-    // Meghatározzuk, melyik hitbox érvényes most
+    // melyik hitbox érvényes
     float activeRadius = trunkRadius;
-    if (cam->y > foliageHeightLimit) {
-        activeRadius = foliageRadius;
-    }
+    if (cam->y > foliageHeightLimit) activeRadius = foliageRadius;
 
-    // Ha közelebb vagyunk, mint a sugár, "kilökjük" a kamerát
+    // kamera kilökés
     if (distance < activeRadius && distance > 0.001f) {
         float overlap = activeRadius - distance;
-        
-        // Az eltolás iránya (normalizált vektor * overlap)
         cam->x += (dx / distance) * overlap;
         cam->z += (dz / distance) * overlap;
     }
+}
+
+/**
+ * Initializes the position of the trees on the map
+ */
+static void initTrees(){
+    srand(mapseed);
+    for (int i = 0; i < maxTrees; i++) {
+        forest[i].x = (float)(rand() %  WIDTH);
+        forest[i].z = (float)(rand() % HEIGHT);
+    }
+}
+
+/**
+ * Displays the trees
+ */
+static void drawTrees(Model* tree, GLuint texture, int treeCount, float centerX, float centerZ, Camera* cam) {
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    // Átlátszóság bekapcsolása (hogy ne legyen fekete/szürke kerete a leveleknek)
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_ALPHA_TEST);
+    glAlphaFunc(GL_GREATER, 0.5f);
+
+    for(int i = 0; i < maxTrees; i++) {
+        glPushMatrix();
+            glTranslatef(forest[i].x, -1.1f, forest[i].z);
+
+            // fát elforgatunk egy kicsit, hogy ne nézzen mind ugyanarra
+            glRotatef(i * 137.5f, 0, 1, 0); 
+            
+            draw_model(tree);
+        glPopMatrix();
+        applyTreeCollision(cam,forest[i].x, forest[i].z);
+    }
+    
+    glDisable(GL_ALPHA_TEST);
+    glDisable(GL_BLEND);
+}
+
+/**
+ * Generates the box into a random position on the map, 
+ * implements checking if the box is picked up already
+ */
+static bool generateBox(Model* cardboardBox, GLuint cardboardTexture, float boxX, float boxZ, bool boxPickedUp, Camera cam, float lightLevel){
+    glBindTexture(GL_TEXTURE_2D, cardboardTexture);
+        glColor3f(lightLevel, lightLevel, lightLevel);
+
+        if (!boxPickedUp) {
+            float dx = cam.x - boxX;
+            float dz = cam.z - boxZ;
+            float distance = sqrtf(dx * dx + dz * dz);
+            glBindTexture(GL_TEXTURE_2D, cardboardTexture);
+            glColor3f(lightLevel, lightLevel, lightLevel);
+
+            glPushMatrix();
+                glTranslatef(boxX, -1.0f, boxZ);  
+                draw_model(cardboardBox);
+            glPopMatrix();
+
+            if (distance < 1.0f) {
+                printf("\nBox picked up! Position: (%.2f, %.2f)\n", boxX, boxZ);
+                boxPickedUp = true;
+            }
+        }
+    return boxPickedUp;
+}
+
+/**
+ * Draws the background walls
+ */
+static void drawBackgroundWalls(GLuint mountainTexture, float lightLevel) {
+    float min = 0.0f;
+    float max = 80.0f;
+    float height = 2.0f;
+    float repeat = 20.0f;
+
+    glBindTexture(GL_TEXTURE_2D, mountainTexture);
+    glColor3f(lightLevel, lightLevel, lightLevel);
+
+    glBegin(GL_QUADS);
+        // HÁTSÓ FAL
+        glTexCoord2f(0, 1);      glVertex3f(min, -1.0f, min); // Itt 0 helyett 1 (vagy amekkora a magasság)
+        glTexCoord2f(repeat, 1); glVertex3f(max, -1.0f, min);
+        glTexCoord2f(repeat, 0); glVertex3f(max, height, min); // Itt 1 helyett 0
+        glTexCoord2f(0, 0);      glVertex3f(min, height, min);
+
+        // ELSŐ FAL
+        glTexCoord2f(0, 1);      glVertex3f(min, -1.0f, max);
+        glTexCoord2f(repeat, 1); glVertex3f(max, -1.0f, max);
+        glTexCoord2f(repeat, 0); glVertex3f(max, height, max);
+        glTexCoord2f(0, 0);      glVertex3f(min, height, max);
+
+        // BAL OLDALI FAL
+        glTexCoord2f(0, 1);      glVertex3f(min, -1.0f, min);
+        glTexCoord2f(repeat, 1); glVertex3f(min, -1.0f, max);
+        glTexCoord2f(repeat, 0); glVertex3f(min, height, max);
+        glTexCoord2f(0, 0);      glVertex3f(min, height, min);
+
+        // JOBB OLDALI FAL
+        glTexCoord2f(0, 1);      glVertex3f(max, -1.0f, min);
+        glTexCoord2f(repeat, 1); glVertex3f(max, -1.0f, max);
+        glTexCoord2f(repeat, 0); glVertex3f(max, height, max);
+        glTexCoord2f(0, 0);      glVertex3f(max, height, min);
+    glEnd();
 }
 
 #endif

@@ -64,9 +64,9 @@ int read_elements(Model* model, FILE* file)
     int success;
 
     allocate_model(model);
-    vertex_index = 1;
-    texture_index = 1;
-    normal_index = 1;
+    vertex_index = 0;
+    texture_index = 0;
+    normal_index = 0;
     triangle_index = 0;
     while (fgets(line, LINE_BUFFER_SIZE, file) != NULL) {
         switch (calc_element_type(line)) {
@@ -256,47 +256,51 @@ int read_normal(Vertex* normal, const char* text)
     return TRUE;
 }
 
+// Segédfüggvény csak az egész számokhoz (indexekhez)
+int is_digit(char c) {
+    return (c >= '0' && c <= '9');
+}
+
 int read_triangle(Triangle* triangle, const char* text)
 {
     int point_index;
-    int i;
+    int i = 0;
 
-    i = 0;
+    // Keressük meg az első számjegyet az 'f' után
+    while (text[i] != 0 && (text[i] < '0' || text[i] > '9')) {
+        i++;
+    }
+
     for (point_index = 0; point_index < 3; ++point_index) {
-        while (text[i] != 0 && is_numeric(text[i]) == FALSE) {
-            ++i;
-        }
+        // VERTEX INDEX: beolvasunk, majd levonunk 1-et
         if (text[i] != 0) {
-            triangle->points[point_index].vertex_index = atoi(&text[i]);
+            triangle->points[point_index].vertex_index = atoi(&text[i]) - 1;
+        } else return FALSE;
+
+        // Szám átugrása a perjelig
+        while (text[i] != 0 && text[i] >= '0' && text[i] <= '9') i++;
+        
+        if (text[i] == '/') {
+            i++;
+            // TEXTURE INDEX: beolvasunk, majd levonunk 1-et
+            if (text[i] >= '0' && text[i] <= '9') {
+                triangle->points[point_index].texture_index = atoi(&text[i]) - 1;
+                while (text[i] != 0 && text[i] >= '0' && text[i] <= '9') i++;
+            }
+            
+            if (text[i] == '/') {
+                i++;
+                // NORMAL INDEX: beolvasunk, majd levonunk 1-et
+                if (text[i] >= '0' && text[i] <= '9') {
+                    triangle->points[point_index].normal_index = atoi(&text[i]) - 1;
+                    while (text[i] != 0 && text[i] >= '0' && text[i] <= '9') i++;
+                }
+            }
         }
-        else {
-            printf("The vertex index of the %d. points is missing!\n", point_index + 1);
-            return FALSE;
-        }
-        while (text[i] != 0 && text[i] != '/') {
-            ++i;
-        }
-        ++i;
-        if (text[i] != 0) {
-            triangle->points[point_index].texture_index = atoi(&text[i]);
-        }
-        else {
-            printf("The texture index of the %d. points is missing!\n", point_index + 1);
-            return FALSE;
-        }
-        while (text[i] != 0 && text[i] != '/') {
-            ++i;
-        }
-        ++i;
-        if (text[i] != 0) {
-            triangle->points[point_index].normal_index = atoi(&text[i]);
-        }
-        else {
-            printf("The normal index of the %d. points is missing!\n", point_index + 1);
-            return FALSE;
-        }
-        while (text[i] != 0 && text[i] != ' ') {
-            ++i;
+
+        // Következő pontra ugrás (szóközök átugrása a következő számjegyig)
+        while (text[i] != 0 && (text[i] < '0' || text[i] > '9')) {
+            i++;
         }
     }
     return TRUE;
