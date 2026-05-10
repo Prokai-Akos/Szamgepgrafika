@@ -31,6 +31,12 @@ int main(int argc, char *argv[])
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_TEXTURE_2D);
 
+    //audio
+    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) printf("SDL_mixer error: %s\n", Mix_GetError());
+    Mix_Music *backgroundMusic = Mix_LoadMUS("assets/sound/geoffharvey-creepy-hollow-369570.mp3");
+    if (!backgroundMusic) printf("Failed to load music: %s\n", Mix_GetError());
+    Mix_PlayMusic(backgroundMusic, -1); //-1 a looped play
+
     //texture loading
     GLuint grass = loadTexture("assets/grass.jpg");
     GLuint dirt = loadTexture("assets/dirt.jpg");
@@ -43,7 +49,8 @@ int main(int argc, char *argv[])
     GLuint uazTexture = loadTexture("assets/qualityUAZTexture.png");
     GLuint tireTexture = loadTexture("assets/darkgrey.png");
     
-    glClearColor(0.5f, 0.8f, 1.0f, 1.0f); //clear sky
+    //glClearColor(0.5f, 0.8f, 1.0f, 1.0f); //clear sky
+    glClearColor(0.2f, 0.45f, 0.8f, 1.0f); // Sötétebb, telítettebb kék
     initParticles();
     initTrees();
     if(loadModels() == 0) printf("All models loaded!\n");
@@ -175,7 +182,8 @@ int main(int argc, char *argv[])
             glClearColor(0.5f, 0.5f, 0.5f, 0.5f); 
         } else {
             glDisable(GL_FOG); 
-            glClearColor(0.5f, 0.8f, 1.0f, 1.0f); 
+            //glClearColor(0.5f, 0.8f, 1.0f, 1.0f); 
+            glClearColor(0.4f *lightLevel, 0.5f*lightLevel, 0.6f*lightLevel, 1.0f); // Sötétebb, telítettebb kék
         }
 
         //collisions
@@ -289,6 +297,9 @@ int main(int argc, char *argv[])
         if(showHelp) drawHelpMenu(font);
         SDL_GL_SwapWindow(window);
     }
+
+    Mix_FreeMusic(backgroundMusic);
+    Mix_CloseAudio();
 
     SDL_GL_DeleteContext(gl_context);
     SDL_DestroyWindow(window);

@@ -6,3 +6,5 @@ trunk.jpg:https://texturelib.com/texture/?path=/Textures/nature/trunk/nature_tru
 carboard.jpg source: https://unsplash.com/photos/brown-textile-in-close-up-photography-bPaRBSuvRPA
 stonewall.jpg:https://www.magnific.com/free-photo/brick-wall-background-texture_32853436.htm#fromView=keyword&page=1&position=10&uuid=223d4e34-b328-455d-a013-d08bd2032e71&query=2d+stone+wall
 door:https://www.magnific.com/free-vector/wooden-texture-background_851099.htm#fromView=search&page=1&position=8&uuid=02dc2944-cc67-4ff4-981f-5e2c40a41423&query=2d+wood
+creepy audio:https://pixabay.com/music/mystery-creepy-hollow-369570/
+UAZ model: AI generated with meshy5

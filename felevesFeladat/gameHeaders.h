@@ -7,6 +7,7 @@
 #include <SDL2/SDL_opengl.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_ttf.h>
+#include <SDL2/SDL_mixer.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <math.h>
@@ -499,23 +500,26 @@ static void drawTrees(Model* tree, GLuint texture, int treeCount, float centerX,
  * implements checking if the box is picked up already
  */
 static bool generateBox(Model* cardboardBox, GLuint cardboardTexture, float boxX, float boxZ, bool boxPickedUp, Camera cam, float lightLevel){
-    glBindTexture(GL_TEXTURE_2D, cardboardTexture);
+    if (!boxPickedUp) {
+        float time = SDL_GetTicks() / 1000.0f;     
+        float bobbing = sinf(time * 3.0f) * 0.15f; 
+        float rotation = time * 60.0f;            
+
+        glBindTexture(GL_TEXTURE_2D, cardboardTexture);
         glColor3f(lightLevel, lightLevel, lightLevel);
 
-        if (!boxPickedUp) {
-            float dx = cam.x - boxX;
-            float dz = cam.z - boxZ;
-            float distance = sqrtf(dx * dx + dz * dz);
-            glBindTexture(GL_TEXTURE_2D, cardboardTexture);
-            glColor3f(lightLevel, lightLevel, lightLevel);
+        float dx = cam.x - boxX;
+        float dz = cam.z - boxZ;
+        float distance = sqrtf(dx * dx + dz * dz);
 
-            glPushMatrix();
-                glTranslatef(boxX, -1.0f, boxZ);  
-                draw_model(cardboardBox);
-            glPopMatrix();
+        glPushMatrix();
+            glTranslatef(boxX, -0.8f + bobbing, boxZ);  
+            glRotatef(rotation, 0, 1, 0); 
+            draw_model(cardboardBox);
+        glPopMatrix();
 
-            if (distance < 1.0f) boxPickedUp = true;
-        }
+        if (distance < 1.0f) boxPickedUp = true;
+    }
     return boxPickedUp;
 }
 
