@@ -82,45 +82,45 @@ Model house;
 Model roof;
 Model door;
 Model uaz;
-Model tire;
 
 static int loadModels(){
-    if (load_model(&tree, "assets/tree/tree.obj")) {
-        printf("Tree model loaded successfully!!\n");
-        scale_model(&tree, 2.0, 2.0, 2.0); 
-    } else printf("Failed to load tree model!\n");
+    if (!load_model(&tree, "assets/tree/tree.obj")){
+        printf("Failed to load tree model!\n");
+        return 1;
+    }
+    else scale_model(&tree, 2.0, 2.0, 2.0); 
 
-    if(load_model(&cardboardBox, "assets/box/carboard-box.obj")){
-        printf("Cardboard box model loaded successfully!\n");
-        scale_model(&cardboardBox, 0.2, 0.2, 0.2); 
-    } else printf("Failed to load cardboard box model!\n");
+    if(!load_model(&cardboardBox, "assets/box/carboard-box.obj")) {
+        printf("Failed to load cardboard box model!\n");
+        return 1;
+    }
+    else scale_model(&cardboardBox, 0.2, 0.2, 0.2); 
 
-    if(load_model(&house,"assets/house/house_walls.obj")){
-        printf("cottage model loaded successfully!\n");
-        scale_model(&house, 1.0, 1.0, 1.0); 
-    } else printf("Failed to load cottage model!\n");
+    if(!load_model(&house,"assets/house/house_walls.obj")){
+        printf("Failed to load cottage model!\n");
+        return 1;
+    }
+    else scale_model(&house, 1.0, 1.0, 1.0); 
 
-    if(load_model(&roof,"assets/house/roof.obj")){
-        printf("cottage model loaded successfully!\n");
-        scale_model(&roof, 1.0, 1.0, 0.85); 
-    } else printf("Failed to load cottage model!\n");
+    if(!load_model(&roof,"assets/house/roof.obj")){
+        printf("Failed to load cottage model!\n");
+        return 1;
+    }
+    else scale_model(&roof, 1.0, 1.0, 0.85); 
     
-    if(load_model(&door,"assets/house/door.obj")){
-        printf("cottage model loaded successfully!\n");
-        scale_model(&door, 0.3, 0.3, 0.3); 
-    } else printf("Failed to load cottage model!\n");
+    if(!load_model(&door,"assets/house/door.obj")){
+        printf("Failed to load cottage model!\n");
+        return 1;
+    }
+    else scale_model(&door, 0.3, 0.3, 0.3);
 
-    if(load_model(&uaz, "assets/uaz/uaz-body.obj")){
-        printf("uaz model loaded successfully!\n");
-        scale_model(&uaz, 0.4, 0.4, 0.4); 
-    } 
-    else printf("Failed to load uaz model!\n");
+    if(!load_model(&uaz, "assets/uaz/highQualityUAZ.obj")){
+        printf("Failed to load uaz model!\n");
+        return 1;
+    }
+    else scale_model(&uaz, 2.0, 2.0, 2.0); 
 
-    if(load_model(&tire, "assets/uaz/tire.obj")){
-        printf("uaz model loaded successfully!\n");
-        scale_model(&tire, 0.4, 0.4, 0.4); 
-    }    else printf("Failed to load uaz model!\n");
-
+    return 0;
 }
 
 /**
@@ -222,11 +222,12 @@ static void drawHelpMenu(TTF_Font* font) {
         "- MOUSE: Look around",
         "- F1: help menu",
         "- ESC: exit",
-        "- + - : set light level"
+        "- + - : set light level",
+        "- SPACE: progress dialogue"
     };
 
     int startY = 100;
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 9; i++) {
         SDL_Color white = {255, 255, 255, 255};
         SDL_Surface* tempSurf = TTF_RenderUTF8_Blended(font, lines[i], white);
         if (!tempSurf) continue;
@@ -513,10 +514,7 @@ static bool generateBox(Model* cardboardBox, GLuint cardboardTexture, float boxX
                 draw_model(cardboardBox);
             glPopMatrix();
 
-            if (distance < 1.0f) {
-                printf("\nBox picked up! Position: (%.2f, %.2f)\n", boxX, boxZ);
-                boxPickedUp = true;
-            }
+            if (distance < 1.0f) boxPickedUp = true;
         }
     return boxPickedUp;
 }
@@ -609,79 +607,57 @@ static bool isInsideCottage(Camera cam) {
 }
 
 /**
- * Draws the UAZ modell along with its wheels
- * AI was used here
+ * Draws the UAZ model
  */
-static void drawUaz(Model* uaz, Model* tire, GLuint uazTexture, GLuint tireTexture, float lightLevel) {
+static void drawUaz(Model* uaz, GLuint uazTexture, float lightLevel) {
     float uazX = 59.0f;
-    float uazZ = 60.0f;
+    float uazZ = 57.0f;
 
     glBindTexture(GL_TEXTURE_2D, uazTexture);
     glColor3f(lightLevel, lightLevel, lightLevel);
     glPushMatrix();
-        glTranslatef(uazX, -0.8f, uazZ);
+        glTranslatef(uazX, -0.15f, uazZ);
+        glRotatef(90.0f,0,1,0);
         draw_model(uaz);
     glPopMatrix();
 
-    if (tire != NULL) {
-        glBindTexture(GL_TEXTURE_2D, tireTexture);
-        
-        float tOffsets[4][3] = {
-            { 0.8f,   -0.2f,  -3.0f}, // Jobb első
-            {-0.9f,   -0.2f,  -3.0f}, // Bal első
-            { 0.8f,   -0.2f,  -1.5f}, // Jobb hátsó
-            {-0.9f,   -0.2f,  -1.5f}  // Bal hátsó
-        };
-
-        for (int i = 0; i < 4; i++) {
-            glPushMatrix();
-                glTranslatef(uazX, -0.8f, uazZ);
-                glTranslatef(tOffsets[i][0], tOffsets[i][1], tOffsets[i][2]);
-                draw_model(tire);
-            glPopMatrix();
-        }
-    }
 }
 
+/*
+* Used to apply a collision box to the UAZ model
+* AI was used for writing this
+*/
 static void applyUazCollision(Camera* cam) {
-    float uazX = 59.0f;
-    float uazZ = 57.5f;
+    float minX = 58.0f;
+    float maxX = 60.0f;
+    float minZ = 54.5f;
+    float maxZ = 59.5f;
     
-    // Az autó szélessége és hossza (fél-méretek)
-    float halfWidth = 1.2f;  // X irány
-    float halfLength = 2.0f; // Z irány
-    float buffer = 0.2f;     // Mennyire ne engedje közel a kamerát
+    float buffer = 0.1f;
+    minX -= buffer; maxX += buffer;
+    minZ -= buffer; maxZ += buffer;
 
-    // Meghatározzuk az autó határait
-    float minX = uazX - halfWidth - buffer;
-    float maxX = uazX + halfWidth + buffer;
-    float minZ = uazZ - halfLength - buffer;
-    float maxZ = uazZ + halfLength + buffer;
-
-    // Ha a kamera a téglalapon belül van
     if (cam->x > minX && cam->x < maxX && cam->z > minZ && cam->z < maxZ) {
-        // Kiszámoljuk melyik oldalhoz van legközelebb
-        float dists[4] = {
-            cam->x - minX, // Bal (0)
-            maxX - cam->x, // Jobb (1)
-            cam->z - minZ, // Hátul (2)
-            maxZ - cam->z  // Elöl (3)
-        };
+        
+        float distLeft   = cam->x - minX;
+        float distRight  = maxX - cam->x;
+        float distBack   = cam->z - minZ;
+        float distFront  = maxZ - cam->z;
 
-        int bestDir = 0;
-        float minDist = dists[0];
-        for (int i = 1; i < 4; i++) {
-            if (dists[i] < minDist) {
-                minDist = dists[i];
-                bestDir = i;
-            }
+        float minDist = distLeft;
+        int direction = 0; // 0: Bal, 1: Jobb, 2: Hátul, 3: Elöl
+
+        if (distRight < minDist) { minDist = distRight; direction = 1; }
+        if (distBack < minDist)  { minDist = distBack;  direction = 2; }
+        if (distFront < minDist) { minDist = distFront; direction = 3; }
+
+        // Kilökés a legközelebbi határhoz
+        switch (direction) {
+            case 0: cam->x = minX; break;
+            case 1: cam->x = maxX; break;
+            case 2: cam->z = minZ; break;
+            case 3: cam->z = maxZ; break;
         }
-
-        // Kilökés a legközelebbi oldalon
-        if (bestDir == 0) cam->x = minX;
-        if (bestDir == 1) cam->x = maxX;
-        if (bestDir == 2) cam->z = minZ;
-        if (bestDir == 3) cam->z = maxZ;
     }
 }
 

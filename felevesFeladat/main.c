@@ -40,13 +40,13 @@ int main(int argc, char *argv[])
     GLuint doorTexture = loadTexture("assets/door.jpg");
     GLuint spruceTexture = loadTexture("assets/tree/tree-nonopaque.png");
     GLuint cardboardTexture = loadTexture("assets/box/cardboard.jpg");
-    GLuint uazTexture = loadTexture("assets/uazGreen.png");
+    GLuint uazTexture = loadTexture("assets/qualityUAZTexture.png");
     GLuint tireTexture = loadTexture("assets/darkgrey.png");
     
     glClearColor(0.5f, 0.8f, 1.0f, 1.0f); //clear sky
     initParticles();
     initTrees();
-    loadModels();
+    if(loadModels() == 0) printf("All models loaded!\n");
 
     float tileSize = 1.0f;
     float centerX = (WIDTH * tileSize) / 2.0f;
@@ -61,7 +61,8 @@ int main(int argc, char *argv[])
     float lightLevel = 0.5f; //0.0-1.0 között legyen
     int treeCount = 10;
     float boxX, boxZ;
-    bool boxPickedUp = false;
+    bool clutchBoxPickedUp = false;
+    bool carKeyBoxPickedUP = false;
     bool doorLocked = true;
     srand(time(NULL));
     boxX = (float)(rand() % 20) + 1.0f; // 1 és 21 közötti random koordináta
@@ -108,14 +109,19 @@ int main(int argc, char *argv[])
                     if(lightLevel < 0) lightLevel = 0;
                     break;
                 case SDLK_SPACE:
+                //used for handling storylines, so we dont display the same thing twice
                  if (storyActive && currentLines != NULL) {
                     if (currentStoryLine < currentMax - 1) {
                         currentStoryLine++;
                     } else {
                         if(currentLines == startStoryLines) startStoryDone = true;
                         if(currentLines == doorStoryLines) doorLockedStoryDone = true;
+                        if(currentLines == crouchSpotStoryLines) crouchAreaDone = true;
+                        if(currentLines == keyBoxPickupLines) carKeyBoxPickedupLinesDone = true;
                         if(currentLines == doorUnlockLines) insideHouseDone = true;
                         if(currentLines == uazNoClutchLines) noClutchDone = true;
+                        if(currentLines == boxPickedUpLines) clutchPickupDone = true;
+                        if(currentLines == carRepairedLines) carRepaired = true;
                         
                         storyActive = false;
                         currentStoryLine = 0;
@@ -189,13 +195,13 @@ int main(int argc, char *argv[])
         glColor3f(lightLevel, lightLevel, lightLevel);
 
         drawBackgroundWalls(stoneWall, lightLevel);
-
         drawCottage(&house,&roof, &door,greyBrick,redBrick,doorTexture,lightLevel);
-        drawUaz(&uaz, &tire, uazTexture, tireTexture, lightLevel);
+        drawUaz(&uaz, uazTexture, lightLevel);
         applyUazCollision(&cam);
 
         drawTrees(&tree, spruceTexture, treeCount, centerX, centerZ, &cam);
-        boxPickedUp = generateBox(&cardboardBox, cardboardTexture, boxX, boxZ, boxPickedUp, cam, lightLevel);
+        clutchBoxPickedUp = generateBox(&cardboardBox, cardboardTexture, boxX, boxZ, clutchBoxPickedUp, cam, lightLevel);
+        carKeyBoxPickedUP = generateBox(&cardboardBox, cardboardTexture, 49.5, 54.5, carKeyBoxPickedUP, cam, lightLevel);
 
         if(isInsideCottage(cam)) doorLocked = false;
         if (doorLocked) applyWallCollision(&cam, doorCollision);
@@ -226,6 +232,7 @@ int main(int argc, char *argv[])
         printf("X: %6.2f | Y: %6.2f | Z: %6.2f\r", cam.x, cam.y, cam.z);
         fflush(stdout);
 
+        //Decides which storyline we are on
         if (!storyActive) {
             const char** tempLines = NULL;
             int tempMax = 0;
@@ -238,13 +245,29 @@ int main(int argc, char *argv[])
                 tempLines = doorStoryLines;
                 tempMax = 2;
             }
+            else if(!crouchAreaDone && doorLocked && inCrouchArea(cam)){
+                tempLines = crouchSpotStoryLines;
+                tempMax = 2;
+            }
+            else if(!carKeyBoxPickedupLinesDone && isInsideCottage(cam)){
+                tempLines = keyBoxPickupLines;
+                tempMax = 3;
+            }
             else if(!insideHouseDone && !doorLocked && insideDoor(cam)){
                 tempLines = doorUnlockLines;
                 tempMax = 2;
             }
             else if(!noClutchDone && insideHouseDone && nearUAZ(cam)){
                 tempLines = uazNoClutchLines;
-                tempMax = 4;
+                tempMax = 7;
+            }
+            else if(!clutchPickupDone && noClutchDone && clutchBoxPickedUp){
+                tempLines = boxPickedUpLines;
+                tempMax = 3;
+            }
+            else if(!carRepaired && clutchPickupDone && nearUAZ(cam)){
+                tempLines = carRepairedLines;
+                tempMax = 6;
             }
 
             if (tempLines != NULL) {
