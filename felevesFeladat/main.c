@@ -31,37 +31,28 @@ int main(int argc, char *argv[])
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_TEXTURE_2D);
 
-    Model tree; // Itt tároljuk a modell adatait a memóriában
-    if (load_model(&tree, "assets/tree/tree.obj")) {
-        printf("Tree model loaded successfully!!\n");
-        scale_model(&tree, 2.0, 2.0, 2.0); 
-    } else printf("Failed to load tree model!\n");
-
-    Model cardboardBox;
-    if(load_model(&cardboardBox, "assets/box/carboard-box.obj")){
-        printf("Cardboard box model loaded successfully!\n");
-        scale_model(&cardboardBox, 0.2, 0.2, 0.2); 
-    } else printf("Failed to load cardboard box model!\n");
-    
     //texture loading
     GLuint grass = loadTexture("assets/grass.jpg");
     GLuint dirt = loadTexture("assets/dirt.jpg");
     GLuint stoneWall = loadTexture("assets/stoneWall.jpg");
+    GLuint redBrick = loadTexture("assets/brick.jpg");
+    GLuint greyBrick = loadTexture("assets/grey_brick.jpg");
+    GLuint doorTexture = loadTexture("assets/door.jpg");
     GLuint spruceTexture = loadTexture("assets/tree/tree-nonopaque.png");
     GLuint cardboardTexture = loadTexture("assets/box/cardboard.jpg");
+    GLuint uazTexture = loadTexture("assets/uazGreen.png");
+    GLuint tireTexture = loadTexture("assets/darkgrey.png");
     
-    //enableFog();
     glClearColor(0.5f, 0.8f, 1.0f, 1.0f); //clear sky
-    //glClearColor(0.5f,0.5f,0.5f,0.5f);//foggy sky
     initParticles();
     initTrees();
+    loadModels();
 
     float tileSize = 1.0f;
     float centerX = (WIDTH * tileSize) / 2.0f;
     float centerZ = (HEIGHT * tileSize) / 2.0f;
     float startX = 50.5;
     float startZ = 79.5;
-    //Camera cam = {centerX, 0.0f, centerZ, 0.0f, 0.0f}; // map közepi start
     Camera cam = {startX, 0.0f, startZ, 0.0f, 0.0f};// map széli start
     bool need_run = true;
     SDL_Event event;
@@ -71,10 +62,18 @@ int main(int argc, char *argv[])
     int treeCount = 10;
     float boxX, boxZ;
     bool boxPickedUp = false;
+    bool doorLocked = true;
     srand(time(NULL));
     boxX = (float)(rand() % 20) + 1.0f; // 1 és 21 közötti random koordináta
     boxZ = (float)(rand() % 20) + 1.0f; 
     printf(" Box generated: X: %.2f, Z: %.2f\n", boxX, boxZ);
+    bool storyActive = false; 
+    int currentStoryLine = 0;
+    int currentMax = 0;
+    const char** currentLines = NULL;
+
+    bool startStoryDone = false;
+    bool doorLockedStoryDone = false;
 
     while (need_run){
         float rad = cam.yaw * (pi / 180.0f);
@@ -108,6 +107,21 @@ int main(int argc, char *argv[])
                     lightLevel -= 0.05f;
                     if(lightLevel < 0) lightLevel = 0;
                     break;
+                case SDLK_SPACE:
+                 if (storyActive && currentLines != NULL) {
+                    if (currentStoryLine < currentMax - 1) {
+                        currentStoryLine++;
+                    } else {
+                        if(currentLines == startStoryLines) startStoryDone = true;
+                        if(currentLines == doorStoryLines) doorLockedStoryDone = true;
+                        if(currentLines == doorUnlockLines) insideHouseDone = true;
+                        if(currentLines == uazNoClutchLines) noClutchDone = true;
+                        
+                        storyActive = false;
+                        currentStoryLine = 0;
+                        currentLines = NULL; // Reseteljük a pointert
+                    }
+                }
                 }
             }
 
@@ -158,7 +172,9 @@ int main(int argc, char *argv[])
             glClearColor(0.5f, 0.8f, 1.0f, 1.0f); 
         }
 
-        cam.x = clamp(cam.x, 0.5f, (WIDTH * tileSize) - 0.5f);
+        //collisions
+        for (int i = 0; i < NUM_HOUSE_WALLS; i++) applyWallCollision(&cam, houseWalls[i]);
+        cam.x = clamp(cam.x, 0.5f, (WIDTH * tileSize) - 0.5f); //border collisions
         cam.z = clamp(cam.z, 0.5f, (HEIGHT * tileSize) - 0.5f);
 
         // Scene render
@@ -174,14 +190,20 @@ int main(int argc, char *argv[])
 
         drawBackgroundWalls(stoneWall, lightLevel);
 
+        drawCottage(&house,&roof, &door,greyBrick,redBrick,doorTexture,lightLevel);
+        drawUaz(&uaz, &tire, uazTexture, tireTexture, lightLevel);
+        applyUazCollision(&cam);
+
         drawTrees(&tree, spruceTexture, treeCount, centerX, centerZ, &cam);
         boxPickedUp = generateBox(&cardboardBox, cardboardTexture, boxX, boxZ, boxPickedUp, cam, lightLevel);
+
+        if(isInsideCottage(cam)) doorLocked = false;
+        if (doorLocked) applyWallCollision(&cam, doorCollision);
 
         glColor3f(lightLevel, lightLevel, lightLevel);//adjust color based on lightlevel
 
         for (int i = 0; i < WIDTH; i++) {
             for (int j = 0; j < HEIGHT; j++) {
-                
                 //tileMap alapján választja a textúrát
                 if (tileMap[i][j] == 0)      glBindTexture(GL_TEXTURE_2D, grass);
                 else if (tileMap[i][j] == 1) glBindTexture(GL_TEXTURE_2D, dirt);
@@ -203,6 +225,43 @@ int main(int argc, char *argv[])
 
         printf("X: %6.2f | Y: %6.2f | Z: %6.2f\r", cam.x, cam.y, cam.z);
         fflush(stdout);
+
+        if (!storyActive) {
+            const char** tempLines = NULL;
+            int tempMax = 0;
+
+            if (!startStoryDone && inStartArea(cam)) {
+                tempLines = startStoryLines;
+                tempMax = 3;
+            } 
+            else if (!doorLockedStoryDone && doorLocked && inFrontOfDoor(cam)) {
+                tempLines = doorStoryLines;
+                tempMax = 2;
+            }
+            else if(!insideHouseDone && !doorLocked && insideDoor(cam)){
+                tempLines = doorUnlockLines;
+                tempMax = 2;
+            }
+            else if(!noClutchDone && insideHouseDone && nearUAZ(cam)){
+                tempLines = uazNoClutchLines;
+                tempMax = 4;
+            }
+
+            if (tempLines != NULL) {
+                currentLines = tempLines;
+                currentMax = tempMax;
+                currentStoryLine = 0; // Reseteljük az elejére
+                storyActive = true;
+            }
+        } 
+        else {
+            if (currentLines == doorStoryLines && !inFrontOfDoor(cam)) {
+                storyActive = false;
+                currentLines = NULL;
+            }
+        }
+
+        if (storyActive && currentLines != NULL) drawDialogueBox(font, currentLines[currentStoryLine]);
 
         if(showHelp) drawHelpMenu(font);
         SDL_GL_SwapWindow(window);

@@ -11,9 +11,9 @@
 #include <stdio.h>
 #include <math.h>
 #include <time.h>
+#include "map.h"
 
 //includes for model loader from gitlab repo
-#include "map.h"
 #include "obj/include/draw.h"
 #include "obj/include/info.h"
 #include "obj/include/load.h"
@@ -29,6 +29,8 @@ typedef struct {
     float pitch;
 } Camera;
 
+#include "storyTexts.h"
+
 /**
  * Particle kezelő struct 
  * */
@@ -43,6 +45,11 @@ typedef struct {
     float z;
 } Tree;
 
+typedef struct {
+    float startX,endX;
+    float startZ, endZ;
+} Wall;
+
 #define maxParticle 600
 static Particle particles[maxParticle];
 
@@ -51,6 +58,15 @@ static Tree forest[maxTrees];
 
 int mapseed = 67;
 
+#define NUM_HOUSE_WALLS 5
+static Wall houseWalls[NUM_HOUSE_WALLS] = {
+    {48.0f, 48.5f, 51.0f, 58.0f}, // hátsó
+    {48.0f, 52.5f, 57.5f, 58.0f}, //bal oldali
+    {48.0f, 52.5f, 51.5f, 52.0f}, // Első fal (ajtóig)
+    {52.0f, 52.5f, 52.0f, 54.5f}, // Jobb oldali fal A (ajtó előtt)
+    {52.0f, 52.5f, 55.5f, 58.0f}  // Jobb oldali fal B (ajtó után)
+};
+static Wall doorCollision = {52.0f, 52.5f, 54.5f, 55.5f};//zárt ajtóhoz
 
 
 /**
@@ -60,6 +76,52 @@ int mapseed = 67;
  */
 static double pi = 3.14159265358979323846;
 
+Model tree;
+Model cardboardBox;
+Model house;
+Model roof;
+Model door;
+Model uaz;
+Model tire;
+
+static int loadModels(){
+    if (load_model(&tree, "assets/tree/tree.obj")) {
+        printf("Tree model loaded successfully!!\n");
+        scale_model(&tree, 2.0, 2.0, 2.0); 
+    } else printf("Failed to load tree model!\n");
+
+    if(load_model(&cardboardBox, "assets/box/carboard-box.obj")){
+        printf("Cardboard box model loaded successfully!\n");
+        scale_model(&cardboardBox, 0.2, 0.2, 0.2); 
+    } else printf("Failed to load cardboard box model!\n");
+
+    if(load_model(&house,"assets/house/house_walls.obj")){
+        printf("cottage model loaded successfully!\n");
+        scale_model(&house, 1.0, 1.0, 1.0); 
+    } else printf("Failed to load cottage model!\n");
+
+    if(load_model(&roof,"assets/house/roof.obj")){
+        printf("cottage model loaded successfully!\n");
+        scale_model(&roof, 1.0, 1.0, 0.85); 
+    } else printf("Failed to load cottage model!\n");
+    
+    if(load_model(&door,"assets/house/door.obj")){
+        printf("cottage model loaded successfully!\n");
+        scale_model(&door, 0.3, 0.3, 0.3); 
+    } else printf("Failed to load cottage model!\n");
+
+    if(load_model(&uaz, "assets/uaz/uaz-body.obj")){
+        printf("uaz model loaded successfully!\n");
+        scale_model(&uaz, 0.4, 0.4, 0.4); 
+    } 
+    else printf("Failed to load uaz model!\n");
+
+    if(load_model(&tire, "assets/uaz/tire.obj")){
+        printf("uaz model loaded successfully!\n");
+        scale_model(&tire, 0.4, 0.4, 0.4); 
+    }    else printf("Failed to load uaz model!\n");
+
+}
 
 /**
  * texture loader, static so if i add it to more files the compiler wont kill itself
@@ -196,6 +258,66 @@ static void drawHelpMenu(TTF_Font* font) {
     glMatrixMode(GL_MODELVIEW);
 }
 
+static void drawDialogueBox(TTF_Font* font, const char* text) {
+    if (!font || !text || text[0] == '\0') return;
+
+    // 1. Átváltás 2D-be
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    gluOrtho2D(0, 800, 600, 0);
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    // 2. Fekete háttér sáv alul
+    glDisable(GL_TEXTURE_2D);
+    glColor4f(0.0f, 0.0f, 0.0f, 0.7f);
+    glBegin(GL_QUADS);
+        glVertex2f(0, 450);   glVertex2f(800, 450);
+        glVertex2f(800, 600); glVertex2f(0, 600);
+    glEnd();
+
+    // 3. Szöveg méretének lekérése és rajzolása
+    glEnable(GL_TEXTURE_2D);
+    glColor4f(1.0f, 1.0f, 1.0f, 1.0f); // Fix fehér szín, ne hasson rá a lightLevel!
+
+    SDL_Color white = {255, 255, 255, 255};
+    SDL_Surface* tempSurf = TTF_RenderUTF8_Blended(font, text, white);
+    if (tempSurf) {
+        int textW = tempSurf->w;
+        int textH = tempSurf->h;
+        SDL_FreeSurface(tempSurf); // Csak a méret kell, a textúrát a textToTexture csinálja
+
+        GLuint tex = textToTexture(font, text);
+        if (tex != 0) {
+            glBindTexture(GL_TEXTURE_2D, tex);
+            
+            // Itt a trükk: a kezdőpont fix (50, 500), de a végpont a szöveg szélességétől függ
+            glBegin(GL_QUADS);
+                glTexCoord2f(0, 0); glVertex2f(50, 500);
+                glTexCoord2f(1, 0); glVertex2f(50 + textW, 500);
+                glTexCoord2f(1, 1); glVertex2f(50 + textW, 500 + textH);
+                glTexCoord2f(0, 1); glVertex2f(50, 500 + textH);
+            glEnd();
+            
+            glDeleteTextures(1, &tex);
+        }
+    }
+
+    // 4. Vissza 3D-be
+    glDisable(GL_BLEND);
+    glEnable(GL_DEPTH_TEST);
+    glPopMatrix();
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+}
+
 /**
  * Enables fog and changes clearColor to fog color
  */
@@ -271,6 +393,7 @@ static float clamp(float n, float min, float max) {
   return n;
 }
 
+
 /**
  * Ütközésvizsgálat egy kör alapú objektummal.
  * Figyelembe veszi a guggolást: ha a kamera alacsonyan van, 
@@ -298,6 +421,39 @@ static void applyTreeCollision(Camera* cam, float treeX, float treeZ) {
     }
 }
 
+/**
+ * Applies the collision box for the house walls
+ * leaves a gap for the door so it can be accessed
+ */
+static void applyWallCollision(Camera* cam, Wall w) {
+    float buffer = 0.2f;
+    
+    if (cam->x > w.startX - buffer && cam->x < w.endX + buffer &&
+        cam->z > w.startZ - buffer && cam->z < w.endZ + buffer) {
+        
+        // Kiszámoljuk, melyik irányból vagyunk a legközelebb a széléhez (behatolás mértéke)
+        float overlapXmin = cam->x - (w.startX - buffer);
+        float overlapXmax = (w.endX + buffer) - cam->x;
+        float overlapZmin = cam->z - (w.startZ - buffer);
+        float overlapZmax = (w.endZ + buffer) - cam->z;
+
+        // Megkeressük a legkisebb overlap-et (merre a legkönnyebb kitolni)
+        float minOverlap = overlapXmin;
+        int direction = 0; // 0: X min, 1: X max, 2: Z min, 3: Z max
+
+        if (overlapXmax < minOverlap) { minOverlap = overlapXmax; direction = 1; }
+        if (overlapZmin < minOverlap) { minOverlap = overlapZmin; direction = 2; }
+        if (overlapZmax < minOverlap) { minOverlap = overlapZmax; direction = 3; }
+
+        // Kilökés a megfelelő irányba
+        switch (direction) {
+            case 0: cam->x -= minOverlap; break;
+            case 1: cam->x += minOverlap; break;
+            case 2: cam->z -= minOverlap; break;
+            case 3: cam->z += minOverlap; break;
+        }
+    }
+}
 /**
  * Initializes the position of the trees on the map
  */
@@ -367,11 +523,12 @@ static bool generateBox(Model* cardboardBox, GLuint cardboardTexture, float boxX
 
 /**
  * Draws the background walls
+ * AI was used here
  */
 static void drawBackgroundWalls(GLuint mountainTexture, float lightLevel) {
     float min = 0.0f;
     float max = 80.0f;
-    float height = 2.0f;
+    float height = 3.0f;
     float repeat = 20.0f;
 
     glBindTexture(GL_TEXTURE_2D, mountainTexture);
@@ -402,6 +559,130 @@ static void drawBackgroundWalls(GLuint mountainTexture, float lightLevel) {
         glTexCoord2f(repeat, 0); glVertex3f(max, height, max);
         glTexCoord2f(0, 0);      glVertex3f(max, height, min);
     glEnd();
+}
+
+/**
+ * Draws the entire cottage, walls, roof, door
+ * AI was used here
+ */
+static void drawCottage(Model* walls, Model* roof, Model* door, GLuint wallTexture, GLuint roofTexture, GLuint doorTexture, float lightLevel){
+    float cottageX = 50.5;
+    float cottageZ = 55;
+    float repeatCount = 3.0f; 
+
+    glBindTexture(GL_TEXTURE_2D, wallTexture);
+    glColor3f(lightLevel, lightLevel, lightLevel);
+
+    // Átváltunk textúra módba, hogy módosítsuk a koordinátákat
+    glMatrixMode(GL_TEXTURE);
+    glPushMatrix();
+    glLoadIdentity();
+    glScalef(repeatCount, repeatCount, 1.0f); // Itt skálázzuk fel az ismétlődést
+
+    glMatrixMode(GL_MODELVIEW); // Visszaváltunk a rajzoláshoz
+    glPushMatrix();
+        glTranslatef(cottageX, -1.0f, cottageZ);  
+        draw_model(walls);
+    glPopMatrix();
+    
+    glBindTexture(GL_TEXTURE_2D, roofTexture);
+    glPushMatrix();
+        glTranslatef(cottageX, 1.0f, cottageZ);  
+        draw_model(roof);
+    glPopMatrix();
+
+    glBindTexture(GL_TEXTURE_2D, doorTexture);
+    glPushMatrix();
+        glTranslatef(cottageX+2, -1.0f, cottageZ);  
+        draw_model(door);
+    glPopMatrix();
+
+
+    glMatrixMode(GL_TEXTURE);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+}
+
+static bool isInsideCottage(Camera cam) {
+    return (cam.x > 48.5f && cam.x < 52.0f &&
+            cam.z > 52.0f && cam.z < 57.5f);
+}
+
+/**
+ * Draws the UAZ modell along with its wheels
+ * AI was used here
+ */
+static void drawUaz(Model* uaz, Model* tire, GLuint uazTexture, GLuint tireTexture, float lightLevel) {
+    float uazX = 59.0f;
+    float uazZ = 60.0f;
+
+    glBindTexture(GL_TEXTURE_2D, uazTexture);
+    glColor3f(lightLevel, lightLevel, lightLevel);
+    glPushMatrix();
+        glTranslatef(uazX, -0.8f, uazZ);
+        draw_model(uaz);
+    glPopMatrix();
+
+    if (tire != NULL) {
+        glBindTexture(GL_TEXTURE_2D, tireTexture);
+        
+        float tOffsets[4][3] = {
+            { 0.8f,   -0.2f,  -3.0f}, // Jobb első
+            {-0.9f,   -0.2f,  -3.0f}, // Bal első
+            { 0.8f,   -0.2f,  -1.5f}, // Jobb hátsó
+            {-0.9f,   -0.2f,  -1.5f}  // Bal hátsó
+        };
+
+        for (int i = 0; i < 4; i++) {
+            glPushMatrix();
+                glTranslatef(uazX, -0.8f, uazZ);
+                glTranslatef(tOffsets[i][0], tOffsets[i][1], tOffsets[i][2]);
+                draw_model(tire);
+            glPopMatrix();
+        }
+    }
+}
+
+static void applyUazCollision(Camera* cam) {
+    float uazX = 59.0f;
+    float uazZ = 57.5f;
+    
+    // Az autó szélessége és hossza (fél-méretek)
+    float halfWidth = 1.2f;  // X irány
+    float halfLength = 2.0f; // Z irány
+    float buffer = 0.2f;     // Mennyire ne engedje közel a kamerát
+
+    // Meghatározzuk az autó határait
+    float minX = uazX - halfWidth - buffer;
+    float maxX = uazX + halfWidth + buffer;
+    float minZ = uazZ - halfLength - buffer;
+    float maxZ = uazZ + halfLength + buffer;
+
+    // Ha a kamera a téglalapon belül van
+    if (cam->x > minX && cam->x < maxX && cam->z > minZ && cam->z < maxZ) {
+        // Kiszámoljuk melyik oldalhoz van legközelebb
+        float dists[4] = {
+            cam->x - minX, // Bal (0)
+            maxX - cam->x, // Jobb (1)
+            cam->z - minZ, // Hátul (2)
+            maxZ - cam->z  // Elöl (3)
+        };
+
+        int bestDir = 0;
+        float minDist = dists[0];
+        for (int i = 1; i < 4; i++) {
+            if (dists[i] < minDist) {
+                minDist = dists[i];
+                bestDir = i;
+            }
+        }
+
+        // Kilökés a legközelebbi oldalon
+        if (bestDir == 0) cam->x = minX;
+        if (bestDir == 1) cam->x = maxX;
+        if (bestDir == 2) cam->z = minZ;
+        if (bestDir == 3) cam->z = maxZ;
+    }
 }
 
 #endif
