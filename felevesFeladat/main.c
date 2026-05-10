@@ -34,8 +34,9 @@ int main(int argc, char *argv[])
     //audio
     if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) printf("SDL_mixer error: %s\n", Mix_GetError());
     Mix_Music *backgroundMusic = Mix_LoadMUS("assets/sound/geoffharvey-creepy-hollow-369570.mp3");
+    Mix_Init(MIX_INIT_MP3);
     if (!backgroundMusic) printf("Failed to load music: %s\n", Mix_GetError());
-    Mix_PlayMusic(backgroundMusic, -1); //-1 a looped play
+    else Mix_PlayMusic(backgroundMusic, -1); //-1 a looped play
 
     //texture loading
     GLuint grass = loadTexture("assets/grass.jpg");
