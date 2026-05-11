@@ -80,6 +80,7 @@ int main(int argc, char *argv[])
     int currentStoryLine = 0;
     int currentMax = 0;
     const char** currentLines = NULL;
+    float endFade = 1.0f;
 
     bool startStoryDone = false;
     bool doorLockedStoryDone = false;
@@ -87,6 +88,7 @@ int main(int argc, char *argv[])
     while (need_run){
         float rad = cam.yaw * (pi / 180.0f);
         float speed = 0.05f; //"walking" speed
+        float currentLight = lightLevel * endFade;
 
         float normalHeight = 0.0f;  // alap eye-level
         float crouchHeight = -0.6f; // gugolós eye-level
@@ -113,7 +115,7 @@ int main(int argc, char *argv[])
                         if(currentLines == boxPickedUpLines) clutchPickupDone = true;
                         if(currentLines == carRepairedLines) {
                             carRepaired = true;
-                            Mix_FadeOutMusic(2000);
+                            Mix_FadeOutMusic(3000);
                         }
                         
                         storyActive = false;
@@ -191,20 +193,21 @@ int main(int argc, char *argv[])
             cam.x = 58.0f;
             cam.z = 56.0f;
             cam.y = 1.5f;     
-            cam.pitch = 10.0f; 
-            cam.yaw = 60.0f;   
+            cam.pitch = 25.0f; 
+            cam.yaw = 30.0f;   
 
-            need_run = false;
+            if(endFade > 0.0f) endFade -=0.005f;
+            if(endFade < 0.01f) need_run = false;
         }
 
     
         if (cam.x < 30.0f || cam.z < 30.0f) {
             enableFog();
-            glClearColor(0.5f, 0.5f, 0.5f, 0.5f); 
+            glClearColor(0.5f*endFade, 0.5f*endFade, 0.5f*endFade, 0.5f); 
         } else if(!carRepaired) {
             glDisable(GL_FOG); 
             //glClearColor(0.5f, 0.8f, 1.0f, 1.0f); 
-            glClearColor(0.4f *lightLevel, 0.5f*lightLevel, 0.6f*lightLevel, 1.0f); // Sötétebb, telítettebb kék
+            glClearColor(0.4f *currentLight, 0.5f*currentLight, 0.6f*currentLight, 1.0f); // Sötétebb, telítettebb kék
         }
 
         //collisions
@@ -221,17 +224,17 @@ int main(int argc, char *argv[])
         glRotatef(cam.yaw, 0.0f, 1.0f, 0.0f);
         glTranslatef(0.0f, -cam.y, 0.0f); // Csak a magasság eltolása
         glTranslatef(-cam.x, 0.0f, -cam.z); // Csak a síkbeli mozgás
-        glColor3f(lightLevel, lightLevel, lightLevel);
+        glColor3f(currentLight, currentLight, currentLight);
 
 
-        drawBackgroundWalls(stoneWall, lightLevel);
-        drawCottage(&house,&roof, &door,greyBrick,redBrick,doorTexture,lightLevel);
-        drawUaz(&uaz, uazTexture, lightLevel);
+        drawBackgroundWalls(stoneWall, currentLight);
+        drawCottage(&house,&roof, &door,greyBrick,redBrick,doorTexture,currentLight);
+        drawUaz(&uaz, uazTexture, currentLight);
         applyUazCollision(&cam);
 
         drawTrees(&tree, spruceTexture, treeCount, centerX, centerZ, &cam);
-        clutchBoxPickedUp = generateBox(&cardboardBox, cardboardTexture, boxX, boxZ, clutchBoxPickedUp, cam, lightLevel);
-        carKeyBoxPickedUP = generateBox(&cardboardBox, cardboardTexture, 49.5, 54.5, carKeyBoxPickedUP, cam, lightLevel);
+        clutchBoxPickedUp = generateBox(&cardboardBox, cardboardTexture, boxX, boxZ, clutchBoxPickedUp, cam, currentLight);
+        carKeyBoxPickedUP = generateBox(&cardboardBox, cardboardTexture, 49.5, 54.5, carKeyBoxPickedUP, cam, currentLight);
 
         if(isInsideCottage(cam) && carKeyBoxPickedUP) doorLocked = false;
         if (doorLocked) applyWallCollision(&cam, doorCollision);

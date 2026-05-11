@@ -24,8 +24,8 @@ Fizika: Az UAZ-452-es gépjármű rúgózása
 Részecskerendszer: Füst és eső
 Enviroment mapping: A fű textúrája kint készült kép lenne, ugyanígy a fák is.
 -----------------------------------------------------------------------
-# Projekt folyamata
-# 1.Modellek
-Modellek beszerzése, elkészítése. Ezután attól függően hogy ez mennyire volt időigényes, vagy továbbhaladni
-a játék aspektussal, vagy az UAZ-452 animációk megvalósítására fókuszálni.
-# 2. A játék pontosabb kidolgozása/ UAZ animációk kidolgozása
+# A választott plussz feladatok
+
+-Köd: ködhatás megvalósítva
+-Ütközésvizsgálat: van bounding box a fákon, házon, UAZ-on, falakon.
+-Részecskerendszerek: van particle rendszer eső formájában, dinamikusan a kamera köré generálja az esőcseppeket és lefelé mozgatja őket
