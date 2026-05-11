@@ -158,9 +158,14 @@ int main(int argc, char *argv[])
             }
             
         }
-        float currentLight = lightLevel; // Alapértelmezett fényerő
 
         if(!carRepaired){
+            //gugolás implementáció
+            if (state[SDL_SCANCODE_LCTRL]){
+                cam.y = crouchHeight; 
+                speed = speed * 0.5;
+            }
+            else cam.y = normalHeight; 
             //wasd mozgás
             if (state[SDL_SCANCODE_W]){
                 cam.x += sinf(rad) * speed;
@@ -181,12 +186,6 @@ int main(int argc, char *argv[])
             //diagonális mozgás
             if ((state[SDL_SCANCODE_W] || state[SDL_SCANCODE_S]) && (state[SDL_SCANCODE_A] || state[SDL_SCANCODE_D])) 
                 speed = speed * 0.7071f; // 1 / sqrt(2)
-            //gugolás implementáció
-            if (state[SDL_SCANCODE_LCTRL]){
-                cam.y = crouchHeight; 
-                speed = speed * 0.5;
-            } 
-            else cam.y = normalHeight;
         }
         if (carRepaired) {
             cam.x = 58.0f;
@@ -202,7 +201,7 @@ int main(int argc, char *argv[])
         if (cam.x < 30.0f || cam.z < 30.0f) {
             enableFog();
             glClearColor(0.5f, 0.5f, 0.5f, 0.5f); 
-        } else {
+        } else if(!carRepaired) {
             glDisable(GL_FOG); 
             //glClearColor(0.5f, 0.8f, 1.0f, 1.0f); 
             glClearColor(0.4f *lightLevel, 0.5f*lightLevel, 0.6f*lightLevel, 1.0f); // Sötétebb, telítettebb kék
@@ -224,6 +223,7 @@ int main(int argc, char *argv[])
         glTranslatef(-cam.x, 0.0f, -cam.z); // Csak a síkbeli mozgás
         glColor3f(lightLevel, lightLevel, lightLevel);
 
+
         drawBackgroundWalls(stoneWall, lightLevel);
         drawCottage(&house,&roof, &door,greyBrick,redBrick,doorTexture,lightLevel);
         drawUaz(&uaz, uazTexture, lightLevel);
@@ -233,10 +233,8 @@ int main(int argc, char *argv[])
         clutchBoxPickedUp = generateBox(&cardboardBox, cardboardTexture, boxX, boxZ, clutchBoxPickedUp, cam, lightLevel);
         carKeyBoxPickedUP = generateBox(&cardboardBox, cardboardTexture, 49.5, 54.5, carKeyBoxPickedUP, cam, lightLevel);
 
-        if(isInsideCottage(cam)) doorLocked = false;
+        if(isInsideCottage(cam) && carKeyBoxPickedUP) doorLocked = false;
         if (doorLocked) applyWallCollision(&cam, doorCollision);
-
-        glColor3f(lightLevel, lightLevel, lightLevel);//adjust color based on lightlevel
 
         for (int i = 0; i < WIDTH; i++) {
             for (int j = 0; j < HEIGHT; j++) {
@@ -279,11 +277,11 @@ int main(int argc, char *argv[])
                 tempLines = crouchSpotStoryLines;
                 tempMax = 2;
             }
-            else if(!carKeyBoxPickedupLinesDone && isInsideCottage(cam)){
+            else if(!carKeyBoxPickedupLinesDone && carKeyBoxPickedUP && isInsideCottage(cam)){
                 tempLines = keyBoxPickupLines;
                 tempMax = 3;
             }
-            else if(!insideHouseDone && !doorLocked && insideDoor(cam)){
+            else if(!insideHouseDone && !doorLocked && carKeyBoxPickedUP && insideDoor(cam)){
                 tempLines = doorUnlockLines;
                 tempMax = 2;
             }

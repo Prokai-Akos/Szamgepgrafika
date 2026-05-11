@@ -583,13 +583,13 @@ static void drawCottage(Model* walls, Model* roof, Model* door, GLuint wallTextu
 
     glMatrixMode(GL_MODELVIEW); // Visszaváltunk a rajzoláshoz
     glPushMatrix();
-        glTranslatef(cottageX, -1.0f, cottageZ);  
+        glTranslatef(cottageX, -0.99f, cottageZ);  //0.99f a-fighting miatt
         draw_model(walls);
     glPopMatrix();
     
     glBindTexture(GL_TEXTURE_2D, roofTexture);
     glPushMatrix();
-        glTranslatef(cottageX, 1.0f, cottageZ);  
+        glTranslatef(cottageX, 1.02f, cottageZ);  //hogy ne clipeljen be a tető a plafonba
         draw_model(roof);
     glPopMatrix();
 
@@ -605,6 +605,9 @@ static void drawCottage(Model* walls, Model* roof, Model* door, GLuint wallTextu
     glMatrixMode(GL_MODELVIEW);
 }
 
+/**
+ * Check if the camera is inside the house
+ */
 static bool isInsideCottage(Camera cam) {
     return (cam.x > 48.5f && cam.x < 52.0f &&
             cam.z > 52.0f && cam.z < 57.5f);
