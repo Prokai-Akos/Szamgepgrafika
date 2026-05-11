@@ -93,32 +93,14 @@ int main(int argc, char *argv[])
         float bobbingHeight = 0.1f; // view bobbingos
         
         while (SDL_PollEvent(&event)){
-            if (event.type == SDL_QUIT)
+            if (event.type == SDL_QUIT || event.type == SDLK_ESCAPE)
                 need_run = false;
-
-            if (event.type == SDL_KEYDOWN){
-                switch (event.key.keysym.sym){
-                case SDLK_ESCAPE:
+            if(event.type == SDL_KEYDOWN){
+                if(event.key.keysym.sym == SDLK_ESCAPE)
                     need_run = false;
-                    break;
-                case SDLK_F1:
-                    showHelp = !showHelp;
-                    if (showHelp) SDL_SetRelativeMouseMode(SDL_FALSE); 
-                    else SDL_SetRelativeMouseMode(SDL_TRUE);
-                    break;
-                case SDLK_PLUS:
-                case SDLK_KP_PLUS:
-                        lightLevel += 0.05f;
-                    if (lightLevel > 1.0f) lightLevel = 1.0f;
-                    break;
-                case SDLK_MINUS:
-                case SDLK_KP_MINUS:
-                    lightLevel -= 0.05f;
-                    if(lightLevel < 0) lightLevel = 0;
-                    break;
-                case SDLK_SPACE:
-                //used for handling storylines, so we dont display the same thing twice
-                 if (storyActive && currentLines != NULL) {
+
+                if (event.key.keysym.sym == SDLK_SPACE) {
+                if (storyActive && currentLines != NULL) {
                     if (currentStoryLine < currentMax - 1) {
                         currentStoryLine++;
                     } else {
@@ -129,17 +111,42 @@ int main(int argc, char *argv[])
                         if(currentLines == doorUnlockLines) insideHouseDone = true;
                         if(currentLines == uazNoClutchLines) noClutchDone = true;
                         if(currentLines == boxPickedUpLines) clutchPickupDone = true;
-                        if(currentLines == carRepairedLines) carRepaired = true;
+                        if(currentLines == carRepairedLines) {
+                            carRepaired = true;
+                            Mix_FadeOutMusic(2000);
+                        }
                         
                         storyActive = false;
                         currentStoryLine = 0;
-                        currentLines = NULL; // Reseteljük a pointert
+                        currentLines = NULL;
                     }
                 }
+            }
+            }
+
+            if (!carRepaired && event.type == SDL_KEYDOWN){
+                switch (event.key.keysym.sym){
+                case SDLK_F1:
+                    showHelp = !showHelp;
+                    if (showHelp) SDL_SetRelativeMouseMode(SDL_FALSE); 
+                    else SDL_SetRelativeMouseMode(SDL_TRUE);
+                    break;
+                case SDLK_PLUS:
+                case SDLK_KP_PLUS:
+                case SDLK_F6:
+                        lightLevel += 0.05f;
+                    if (lightLevel > 1.0f) lightLevel = 1.0f;
+                    break;
+                case SDLK_MINUS:
+                case SDLK_KP_MINUS:
+                case SDLK_F5:
+                    lightLevel -= 0.05f;
+                    if(lightLevel < 0) lightLevel = 0;
+                    break;
                 }
             }
 
-            if (event.type == SDL_MOUSEMOTION){
+            if (!carRepaired && event.type == SDL_MOUSEMOTION){
                 float sensitivity = 0.2f;
                 cam.yaw += event.motion.xrel * sensitivity;
                 cam.pitch += event.motion.yrel * sensitivity;
@@ -149,35 +156,49 @@ int main(int argc, char *argv[])
                 if (cam.pitch < -89.0f)
                    cam.pitch = -89.0f;
             }
+            
+        }
+        float currentLight = lightLevel; // Alapértelmezett fényerő
+
+        if(!carRepaired){
+            //wasd mozgás
+            if (state[SDL_SCANCODE_W]){
+                cam.x += sinf(rad) * speed;
+                cam.z -= cosf(rad) * speed;
+            }
+            if (state[SDL_SCANCODE_S]){
+                cam.x -= sinf(rad) * speed;
+                cam.z += cosf(rad) * speed;
+            }
+            if (state[SDL_SCANCODE_A]){
+                cam.x -= cosf(rad) * speed;
+                cam.z -= sinf(rad) * speed;
+            }
+            if (state[SDL_SCANCODE_D]){
+                cam.x += cosf(rad) * speed;
+                cam.z += sinf(rad) * speed;
+            }
+            //diagonális mozgás
+            if ((state[SDL_SCANCODE_W] || state[SDL_SCANCODE_S]) && (state[SDL_SCANCODE_A] || state[SDL_SCANCODE_D])) 
+                speed = speed * 0.7071f; // 1 / sqrt(2)
+            //gugolás implementáció
+            if (state[SDL_SCANCODE_LCTRL]){
+                cam.y = crouchHeight; 
+                speed = speed * 0.5;
+            } 
+            else cam.y = normalHeight;
+        }
+        if (carRepaired) {
+            cam.x = 58.0f;
+            cam.z = 56.0f;
+            cam.y = 1.5f;     
+            cam.pitch = 10.0f; 
+            cam.yaw = 60.0f;   
+
+            need_run = false;
         }
 
-        //gugolás implementáció
-        if (state[SDL_SCANCODE_LCTRL]){
-            cam.y = crouchHeight; 
-            speed = speed * 0.5;
-        } 
-        else cam.y = normalHeight;
-
-        //wasd mozgás
-        if (state[SDL_SCANCODE_W]){
-            cam.x += sinf(rad) * speed;
-            cam.z -= cosf(rad) * speed;
-        }
-        if (state[SDL_SCANCODE_S]){
-            cam.x -= sinf(rad) * speed;
-            cam.z += cosf(rad) * speed;
-        }
-        if (state[SDL_SCANCODE_A]){
-            cam.x -= cosf(rad) * speed;
-            cam.z -= sinf(rad) * speed;
-        }
-        if (state[SDL_SCANCODE_D]){
-            cam.x += cosf(rad) * speed;
-            cam.z += sinf(rad) * speed;
-        }
-        //diagonális mozgás
-        if ((state[SDL_SCANCODE_W] || state[SDL_SCANCODE_S]) && (state[SDL_SCANCODE_A] || state[SDL_SCANCODE_D])) 
-            speed = speed * 0.7071f; // 1 / sqrt(2)
+    
         if (cam.x < 30.0f || cam.z < 30.0f) {
             enableFog();
             glClearColor(0.5f, 0.5f, 0.5f, 0.5f); 
@@ -298,6 +319,7 @@ int main(int argc, char *argv[])
         if(showHelp) drawHelpMenu(font);
         SDL_GL_SwapWindow(window);
     }
+    if (carRepaired) SDL_Delay(2000); 
 
     Mix_FreeMusic(backgroundMusic);
     Mix_CloseAudio();

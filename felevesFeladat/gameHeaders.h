@@ -223,7 +223,7 @@ static void drawHelpMenu(TTF_Font* font) {
         "- MOUSE: Look around",
         "- F1: help menu",
         "- ESC: exit",
-        "- + - : set light level",
+        "- + - , F5,F6: set light level",
         "- SPACE: progress dialogue"
     };
 
