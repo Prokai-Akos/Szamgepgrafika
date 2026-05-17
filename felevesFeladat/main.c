@@ -117,6 +117,11 @@ int main(int argc, char *argv[])
                             carRepaired = true;
                             Mix_FadeOutMusic(3000);
                         }
+                        /*switch(currentState){
+                            case STATE_INTRO: startStoryDone = true; break;
+                            case STATE_DOOR_LOCKED: doorLockedStoryDone = true; break;
+                            case STATE_CROUCH_DONE: crouchAreaDone = true; break;
+                        }*/
                         
                         storyActive = false;
                         currentStoryLine = 0;
