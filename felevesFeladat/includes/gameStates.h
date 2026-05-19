@@ -13,6 +13,6 @@ typedef enum{
     STATE_COUNT
 } GameState;
 
-GameState currentState = STATE_INTRO;
+extern GameState currentState;
 
 #endif

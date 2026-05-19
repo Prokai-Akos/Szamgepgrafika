@@ -1,7 +1,9 @@
 #ifndef PARTICLES_H
 #define PARTICLES_H
 
-#include "gameHeaders.h"
+#include "cam.h"
+#include <GL/gl.h>
+#include <stdlib.h>
 
 /**
  * Particle struct
@@ -18,11 +20,11 @@ static Particle particles[maxParticle];
 /**
  * Initializes particles so they can be displayed later on
  */
-static void initParticles();
+void initParticles();
 
 /**
  * Displayes the particles, takes a cam so particles are generated even when the camera moves
  * and it always generates around the camera even when it moves
  */
-static void displayParticles(Camera cam);
+void displayParticles(Camera cam);
 #endif

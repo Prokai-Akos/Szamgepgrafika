@@ -1,4 +1,4 @@
-#include "gameHeaders.h"
+#include "includes/utils.h"
 
 int main(int argc, char *argv[])
 {
@@ -26,17 +26,22 @@ int main(int argc, char *argv[])
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     // FOV, Aspect Ratio, Near Clip, Far Clip
-    gluPerspective(45.0, 800.0 / 600.0, 0.1, 100.0);
+    float fov = 45.0f;
+    float aspect = 800.0f / 600.0f;
+    float zNear = 0.1f;
+    float zFar = 100.0f;
+
+    // Kiszámoljuk a vetítési ablak határait a látószög (FOV) alapján
+    float fH = tanf(fov / 360.0f * 3.14159265f) * zNear;
+    float fW = fH * aspect;
+    glFrustum(-fW, fW, -fH, fH, zNear, zFar);
     glMatrixMode(GL_MODELVIEW);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_TEXTURE_2D);
 
-    //audio
-    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) printf("SDL_mixer error: %s\n", Mix_GetError());
-    Mix_Music *backgroundMusic = Mix_LoadMUS("assets/sound/geoffharvey-creepy-hollow-369570.mp3");
-    Mix_Init(MIX_INIT_MP3);
-    if (!backgroundMusic) printf("Failed to load music: %s\n", Mix_GetError());
-    else Mix_PlayMusic(backgroundMusic, -1); //-1 a looped play
+    //Init and play background music, with source defined in sound.h
+    initSound();
+    playMusic(backgroundMusic,source);
 
     //texture loading
     GLuint grass = loadTexture("assets/grass.jpg");

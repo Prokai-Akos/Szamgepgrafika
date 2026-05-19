@@ -1,6 +1,6 @@
 #include "particles.h"
 
-static void initParticles(){
+void initParticles(){
     for (int i = 0; i < maxParticle; i++){
         particles[i].x = (rand() % 20) - 10;
         particles[i].y = (rand() % 10);
@@ -10,7 +10,7 @@ static void initParticles(){
     }
 };
 
-static void displayParticles(Camera cam){
+void displayParticles(Camera cam){
     glDisable(GL_TEXTURE_2D);
     glPointSize(5.0f);
     glEnable(GL_BLEND);
