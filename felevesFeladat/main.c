@@ -51,7 +51,9 @@ int main(int argc, char *argv[])
     //Init and play background music, with source defined in sound.h
     initSound();
     playMusic(backgroundMusic,source);
-    
+
+    //texture loading
+      
     //glClearColor(0.5f, 0.8f, 1.0f, 1.0f); //clear sky
     glClearColor(0.2f, 0.45f, 0.8f, 1.0f); // Sötétebb, telítettebb kék
 
