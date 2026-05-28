@@ -1,27 +1,17 @@
 #include "includes/loadTextures.h"
 
-GLuint grass;
-GLuint dirt;
-GLuint stoneWall;
-GLuint redBrick;
-GLuint greyBrick;
-GLuint doorTexture;
-GLuint spruceTexture;
-GLuint cardboardTexture;
-GLuint uazTexture;
-GLuint tireTexture;
+Textures textures;
 
-void initTextures(){
-    GLuint grass = loadTexture("assets/grass.jpg");
-    GLuint dirt = loadTexture("assets/dirt.jpg");
-    GLuint stoneWall = loadTexture("assets/stoneWall.jpg");
-    GLuint redBrick = loadTexture("assets/brick.jpg");
-    GLuint greyBrick = loadTexture("assets/grey_brick.jpg");
-    GLuint doorTexture = loadTexture("assets/door.jpg");
-    GLuint spruceTexture = loadTexture("assets/tree/tree-nonopaque.png");
-    GLuint cardboardTexture = loadTexture("assets/box/cardboard.jpg");
-    GLuint uazTexture = loadTexture("assets/qualityUAZTexture.png");
-    GLuint tireTexture = loadTexture("assets/darkgrey.png");
+void initTextures(Textures* textures){
+    textures->grass = loadTexture("assets/grass.jpg");
+    textures->dirt = loadTexture("assets/dirt.jpg");
+    textures->stoneWall = loadTexture("assets/stoneWall.jpg");
+    textures->redBrick = loadTexture("assets/brick.jpg");
+    textures->greyBrick = loadTexture("assets/grey_brick.jpg");
+    textures->doorTexture = loadTexture("assets/door.jpg");
+    textures->spruceTexture = loadTexture("assets/tree/tree-nonopaque.png");
+    textures->cardboardTexture = loadTexture("assets/box/cardboard.jpg");
+    textures->uazTexture = loadTexture("assets/qualityUAZTexture.png");
 }
 
 GLuint loadTexture(const char *filename){

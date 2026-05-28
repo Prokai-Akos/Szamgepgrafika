@@ -205,7 +205,6 @@ int main(int argc, char *argv[])
             if(endFade > 0.0f) endFade -=0.005f;
             if(endFade < 0.01f) need_run = false;
         }
-
     
         if (cam.x < 30.0f || cam.z < 30.0f) {
             enableFog();

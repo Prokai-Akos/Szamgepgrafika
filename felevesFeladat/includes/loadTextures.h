@@ -1,28 +1,34 @@
-#ifndef LOAD_TEXT_H
-#define LOAD_TEXT_H
+#ifndef LOAD_TEXTURES_H
+#define LOAD_TEXTURES_H
 
 #include <GL/gl.h>
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
 
-extern GLuint grass;
-extern GLuint dirt;
-extern GLuint stoneWall;
-extern GLuint redBrick;
-extern GLuint greyBrick;
-extern GLuint doorTexture;
-extern GLuint spruceTexture;
-extern GLuint cardboardTexture;
-extern GLuint uazTexture;
-extern GLuint tireTexture;
+typedef struct{
+    GLuint grass;
+    GLuint dirt;
+    GLuint stoneWall;
+    GLuint redBrick;
+    GLuint greyBrick;
+    GLuint doorTexture;
+    GLuint spruceTexture;
+    GLuint cardboardTexture;
+    GLuint uazTexture;
+}Textures;
+
+extern Textures textures;
 
 /**
- * Initializes and loads all the necessary textures
+ * Individual texture loader
  */
-void initTextures();
+GLuint loadTexture(const char* filename);
 
 /**
- * Loads the texture from a given file
+ * Initializes and loads all the necessary game textures
  */
-GLuint loadTexture(const char *filename);
+void initTextures(Textures* textures);
+
+
 
 #endif
