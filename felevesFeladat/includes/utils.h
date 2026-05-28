@@ -21,6 +21,7 @@
 #include "texts.h"
 #include "tree.h"
 #include "uaz.h"
+#include "texture.h"
 
 //includes for model loader from gitlab repo
 #include "obj/include/draw.h"

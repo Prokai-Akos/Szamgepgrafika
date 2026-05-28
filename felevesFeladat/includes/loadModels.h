@@ -9,12 +9,18 @@
 #include "obj/include/draw.h"
 #include "obj/include/load.h"
 #include "obj/include/transform.h"
-extern Model tree;
-extern Model cardboardBox;
-extern Model house;
-extern Model roof;
-extern Model door;
-extern Model uaz;
+
+typedef struct{
+    Model tree;
+    Model cardboardBox;
+    Model house;
+    Model roof;
+    Model door;
+    Model uaz;
+}Models;
+
+extern Models models;
+
 /**
  * texture loader
  */

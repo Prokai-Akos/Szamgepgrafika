@@ -13,7 +13,7 @@ typedef struct {
 } Tree;
 
 #define maxTrees 200
-static Tree forest[maxTrees];
+extern Tree forest[maxTrees];
 
 /**
  * Initializes the position of the trees on the map

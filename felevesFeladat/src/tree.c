@@ -1,5 +1,7 @@
 #include "tree.h"
 
+Tree forest[maxTrees];
+
 void initTrees(){
     srand(mapseed);
     for (int i = 0; i < maxTrees; i++) {

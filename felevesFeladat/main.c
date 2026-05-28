@@ -25,11 +25,20 @@ int main(int argc, char *argv[])
     // 3D perspektíva
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
+
     // FOV, Aspect Ratio, Near Clip, Far Clip
     float fov = 45.0f;
     float aspect = 800.0f / 600.0f;
     float zNear = 0.1f;
     float zFar = 100.0f;
+
+    //Initializations
+    initTextures(&textures);
+    initParticles();
+    initTrees();
+    initSound();
+    playMusic(backgroundMusic,source);
+    if(loadModels() == 0) printf("All models loaded!\n");
 
     // Kiszámoljuk a vetítési ablak határait a látószög (FOV) alapján
     float fH = tanf(fov / 360.0f * 3.14159265f) * zNear;
@@ -42,24 +51,9 @@ int main(int argc, char *argv[])
     //Init and play background music, with source defined in sound.h
     initSound();
     playMusic(backgroundMusic,source);
-
-    //texture loading
-    GLuint grass = loadTexture("assets/grass.jpg");
-    GLuint dirt = loadTexture("assets/dirt.jpg");
-    GLuint stoneWall = loadTexture("assets/stoneWall.jpg");
-    GLuint redBrick = loadTexture("assets/brick.jpg");
-    GLuint greyBrick = loadTexture("assets/grey_brick.jpg");
-    GLuint doorTexture = loadTexture("assets/door.jpg");
-    GLuint spruceTexture = loadTexture("assets/tree/tree-nonopaque.png");
-    GLuint cardboardTexture = loadTexture("assets/box/cardboard.jpg");
-    GLuint uazTexture = loadTexture("assets/qualityUAZTexture.png");
-    GLuint tireTexture = loadTexture("assets/darkgrey.png");
     
     //glClearColor(0.5f, 0.8f, 1.0f, 1.0f); //clear sky
     glClearColor(0.2f, 0.45f, 0.8f, 1.0f); // Sötétebb, telítettebb kék
-    initParticles();
-    initTrees();
-    if(loadModels() == 0) printf("All models loaded!\n");
 
     float tileSize = 1.0f;
     float centerX = (WIDTH * tileSize) / 2.0f;
@@ -69,7 +63,7 @@ int main(int argc, char *argv[])
     Camera cam = {startX, 0.0f, startZ, 0.0f, 0.0f};// map széli start
     bool need_run = true;
     SDL_Event event;
-    const Uint8 *state = SDL_GetKeyboardState(NULL);//állandó gomblenyomásos mozgásű
+    const Uint8 *state = SDL_GetKeyboardState(NULL);//állandó gomblenyomásos mozgás
     bool showHelp = false;
     float lightLevel = 0.5f; //0.0-1.0 között legyen
     int treeCount = 10;
@@ -237,33 +231,40 @@ int main(int argc, char *argv[])
         glColor3f(currentLight, currentLight, currentLight);
 
 
-        drawBackgroundWalls(stoneWall, currentLight);
-        drawCottage(&house,&roof, &door,greyBrick,redBrick,doorTexture,currentLight);
-        drawUaz(&uaz, uazTexture, currentLight);
+        drawBackgroundWalls(textures.stoneWall, currentLight);
+        drawCottage(&models.house,&models.roof, &models.door,textures.greyBrick,textures.redBrick,textures.doorTexture,currentLight);
+        drawUaz(&models.uaz, textures.uazTexture, currentLight);
         applyUazCollision(&cam);
 
-        drawTrees(&tree, spruceTexture, treeCount, centerX, centerZ, &cam);
-        clutchBoxPickedUp = generateBox(&cardboardBox, cardboardTexture, boxX, boxZ, clutchBoxPickedUp, cam, currentLight);
-        carKeyBoxPickedUP = generateBox(&cardboardBox, cardboardTexture, 49.5, 54.5, carKeyBoxPickedUP, cam, currentLight);
+        drawTrees(&models.tree, textures.spruceTexture, treeCount, centerX, centerZ, &cam);
+        clutchBoxPickedUp = generateBox(&models.cardboardBox, textures.cardboardTexture, boxX, boxZ, clutchBoxPickedUp, cam, currentLight);
+        carKeyBoxPickedUP = generateBox(&models.cardboardBox, textures.cardboardTexture, 49.5, 54.5, carKeyBoxPickedUP, cam, currentLight);
 
         if(isInsideCottage(cam) && carKeyBoxPickedUP) doorLocked = false;
         if (doorLocked) applyWallCollision(&cam, doorCollision);
 
         for (int i = 0; i < WIDTH; i++) {
-            for (int j = 0; j < HEIGHT; j++) {
-                //tileMap alapján választja a textúrát
-                if (tileMap[i][j] == 0)      glBindTexture(GL_TEXTURE_2D, grass);
-                else if (tileMap[i][j] == 1) glBindTexture(GL_TEXTURE_2D, dirt);
+    for (int j = 0; j < HEIGHT; j++) {
+        // tileMap alapján választja a textúrát
+        if (tileMap[i][j] == 0)      glBindTexture(GL_TEXTURE_2D, textures.grass);
+        else if (tileMap[i][j] == 1) glBindTexture(GL_TEXTURE_2D, textures.dirt);
 
-                glBegin(GL_QUADS);
-                    glTexCoord2f(0.0f, 0.0f); glVertex3f(i * tileSize, -1.0f, j * tileSize);
-                    glTexCoord2f(1.0f, 0.0f); glVertex3f((i+1) * tileSize, -1.0f, j * tileSize);
-                    glTexCoord2f(1.0f, 1.0f); glVertex3f((i+1) * tileSize, -1.0f, (j+1) * tileSize);
-                    glTexCoord2f(0.0f, 1.0f); glVertex3f(i * tileSize, -1.0f, (j+1) * tileSize);
-                glEnd();
-            }
-        }
+        glBegin(GL_QUADS);
+            // Minden egyes (i, j) négyzet saját 0.0 -> 1.0 textúra koordinátát kap!
+            glTexCoord2f(0.0f, 0.0f); 
+            glVertex3f(i * tileSize, -1.0f, j * tileSize);
 
+            glTexCoord2f(1.0f, 0.0f); 
+            glVertex3f((i+1) * tileSize, -1.0f, j * tileSize);
+
+            glTexCoord2f(1.0f, 1.0f); 
+            glVertex3f((i+1) * tileSize, -1.0f, (j+1) * tileSize);
+
+            glTexCoord2f(0.0f, 1.0f); 
+            glVertex3f(i * tileSize, -1.0f, (j+1) * tileSize);
+        glEnd();
+    }
+}
         glBindTexture(GL_TEXTURE_2D, 0);
         displayParticles(cam);
 
