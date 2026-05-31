@@ -49,6 +49,7 @@ int initEngine(){
     initFont();
     initStory();
     initBoxes();
+    initMapMesh();
     playMusic(backgroundMusic,source);
     if(loadModels() == 0) printf("All models loaded!\n");
     boxGenerator();

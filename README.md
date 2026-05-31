@@ -10,6 +10,8 @@ The Aim of this repository is to serve as the main place where coursework and as
 3. Unzip the folder, and copy "assets" folder into "felevesFeladat"
 4. Open the terminal and write make
 5. The game will open and you can play
+
+**Assets:**https://drive.google.com/drive/folders/1nwoQyjBPKmXRrpDQefp3fMYplx_4YvgO?usp=drive_link
 -----------------------------------------------------------------------
 # A megvalósított játék
 A játékos egy pálya szélén egy földúton kezd, fákkal körülvéve. A földúton lát egy házat egy UAZ-452-essel mellette. A játékos felfedezi hogy az ajtó zárva van, ezért meg kell próbálnia másképpen bejutnia az épületbe. Az épületben megtalálja az UAZ kulcsát és belülről az ajtót is ki tudja nyitni. Megpróbálja beindítani az UAZ-t viszont a kuplung beesik, a játékos rájön hogy hiányzik a kuplung mechanizmusa, így elindul az erődben keresgélni. Hirtelen köd lesz így nehezebb látási viszonyok mellett kell megkeresnie a kuplungot. Miután a játékos megtalálja a kuplungot, ezután megtudja szerelni az UAZ-t és így a játék véget ér.

@@ -4,11 +4,13 @@
 #define WIDTH 80
 #define HEIGHT 80
 
+#include <GL/gl.h>
 #include "loadTextures.h"
 #include "cam.h"
 
 extern float tileSize;
 extern int tileMap[WIDTH][HEIGHT];
+extern GLuint mapDisplayList;
 
 /**
  * Draws the map, tilesize can be set in map.c, also textures the map
@@ -20,5 +22,10 @@ void drawMap();
  */
 void displayCoordinatesInTerminal(Camera* cam);
 
+/**
+ * Initializes the mesh for the map
+ * AI was used here
+ */
+void initMapMesh();
 
 #endif
