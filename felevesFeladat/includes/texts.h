@@ -6,27 +6,51 @@
 #include "cam.h"
 #include <SDL2/SDL_ttf.h>
 #include <GL/gl.h>
+#include "box.h"
+#include "gameStates.h"
+#include "engine.h"
 
-extern bool startStoryDone;
-extern bool doorLockedStoryDone;
-extern bool insideHouseDone;
-extern bool carKeyBoxPickedupLinesDone;
-extern bool noClutchDone;
-extern bool crouchAreaDone;
-extern bool clutchPickupDone;
-extern bool carRepaired;
+typedef struct{
+    bool startStoryDone;
+    bool doorLockedStoryDone;
+    bool insideHouseDone;
+    bool carKeyBoxPickedupLinesDone;
+    bool noClutchDone;
+    bool crouchAreaDone;
+    bool clutchPickupDone;
+    bool carRepaired;
+}StoryStates;
+
+typedef struct{
+    const char** startStoryLines;
+    const char** doorStoryLines;
+    const char** crouchSpotStoryLines;
+    const char** keyBoxPickupLines;
+    const char** doorUnlockLines;
+    const char** uazNoClutchLines;
+    const char** boxPickedUpLines;
+    const char** carRepairedLines;
+} StoryLines;
+
+extern StoryStates storyStates;
+extern StoryLines storyLines;
+extern TTF_Font* font;
 
 extern const char** currentLines;
 extern int currentMax;
+extern int currentStoryLine;
+extern bool storyActive;
 
-extern const char* startStoryLines[];
-extern const char* doorStoryLines[];
-extern const char* crouchSpotStoryLines[];
-extern const char* keyBoxPickupLines[];
-extern const char* doorUnlockLines[];
-extern const char* uazNoClutchLines[];
-extern const char* boxPickedUpLines[];
-extern const char* carRepairedLines[];
+
+/**Initializes TTF and the given font style from assets */
+void initFont();
+
+/**Initializes the struct contatining the story states
+ * Also initializes the storyLines struct
+*/
+void initStory();
+
+void updateStoryLogic(bool* storyActive, const char*** currentLines, int* currentMax, int* currentStoryLine);
 
 /*
 *Checks if the player is in the starting area, used for displaying the staring story text

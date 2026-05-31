@@ -2,18 +2,14 @@
 #include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_opengl.h>
 
-bool startStoryDone = false;
-bool doorLockedStoryDone = false;
-bool insideHouseDone = false;
-bool carKeyBoxPickedupLinesDone = false;
-bool noClutchDone = false;
-bool crouchAreaDone = false;
-bool clutchPickupDone = false;
-bool carRepaired = false;
+TTF_Font* font;
+StoryStates storyStates;
+StoryLines storyLines;
 
 const char** currentLines = NULL;
 int currentMax = 0;
-
+int currentStoryLine = 0;
+bool storyActive = false; 
 
 const char* startStoryLines[] = {
     "Welcome to the Countryside Adventure! Press f1 for controls.",
@@ -66,6 +62,113 @@ const char* carRepairedLines[] = {
     "After a while you manage to do it!",
     "Congratulations, freedom awaits!"
 };
+
+void initFont(){
+    if (TTF_Init() == -1) printf("TTF_Init error: %s\n", TTF_GetError());
+    font = TTF_OpenFont("assets/Roboto-VariableFont_wdth,wght.ttf", 24);
+    if (!font) printf("Font load error: %s\n", TTF_GetError());
+}
+
+void initStory(){
+    storyStates.startStoryDone = false;
+    storyStates.doorLockedStoryDone = false;
+    storyStates.insideHouseDone = false;
+    storyStates.carKeyBoxPickedupLinesDone = false;
+    storyStates.noClutchDone = false;
+    storyStates.crouchAreaDone = false;
+    storyStates.clutchPickupDone = false;
+    storyStates.carRepaired = false;
+
+    storyLines.startStoryLines = startStoryLines;
+    storyLines.doorStoryLines = doorStoryLines;
+    storyLines.crouchSpotStoryLines = crouchSpotStoryLines;
+    storyLines.keyBoxPickupLines = keyBoxPickupLines;
+    storyLines.doorUnlockLines = doorUnlockLines;
+    storyLines.uazNoClutchLines = uazNoClutchLines;
+    storyLines.boxPickedUpLines = boxPickedUpLines;
+    storyLines.carRepairedLines = carRepairedLines;
+    
+}
+
+void updateStoryLogic(bool* storyActive, const char*** currentLines, int* currentMax, int* currentStoryLine) {
+    if (*storyActive) {
+        if (currentState == STATE_DOOR_LOCKED && !inFrontOfDoor(cam)) {
+            *storyActive = false;
+            *currentLines = NULL;
+        }
+        return; 
+    }
+
+    const char** tempLines = NULL;
+    int tempMax = 0;
+
+    switch (currentState) {
+        case STATE_INTRO:
+            if (inStartArea(cam)) {
+                tempLines = storyLines.startStoryLines;
+                tempMax = 3;
+                *storyActive = true;
+            }
+            break;
+        case STATE_DOOR_LOCKED:
+            if (inFrontOfDoor(cam) && !storyStates.doorLockedStoryDone) {
+                tempLines = storyLines.doorStoryLines;
+                tempMax = 2;
+                *storyActive = true;
+                storyStates.doorLockedStoryDone = true;
+            }
+            else if (inCrouchArea(cam)) {
+                currentState = STATE_CROUCH_DONE;
+                tempLines = storyLines.crouchSpotStoryLines;
+                tempMax = 2;
+                *storyActive = true;
+            }
+            break;
+        case STATE_CROUCH_DONE:
+            if (boxHandler.carKeyBoxPickedUP && isInsideCottage(cam)) {
+                currentState = STATE_KEY_BOX_PICKUP; 
+                tempLines = storyLines.keyBoxPickupLines;
+                tempMax = 3;
+                *storyActive = true;
+            }
+            break;
+        case STATE_KEY_BOX_PICKUP:
+            break;
+        case STATE_INSIDE_HOUSE:
+            if (nearUAZ(cam)) {
+                currentState = STATE_NO_CLUTCH;
+                tempLines = storyLines.uazNoClutchLines;
+                tempMax = 7;
+                *storyActive = true;
+            }
+            break;
+        case STATE_NO_CLUTCH:
+            if (boxHandler.clutchBoxPickedUp) {
+                currentState = STATE_CLUTCH_PICKUP;
+                tempLines = storyLines.boxPickedUpLines;
+                tempMax = 3;
+                *storyActive = true;
+            }
+            break;
+        case STATE_CLUTCH_PICKUP:
+            if (nearUAZ(cam) && !storyStates.carRepaired) {
+                currentState = STATE_CAR_REPAIRED;
+                tempLines = storyLines.carRepairedLines;
+                tempMax = 6;
+                *storyActive = true;
+                storyStates.carRepaired = true;
+            }
+            break;
+        case STATE_CAR_REPAIRED:
+            break;
+    }   
+
+    if (*storyActive && tempLines != NULL) {
+        *currentLines = tempLines;
+        *currentMax = tempMax;
+        *currentStoryLine = 0;
+    }
+}
 
 bool inStartArea(Camera cam){
     return (cam.x > 45 && cam.x < 55 && cam.z >60 && cam.z <80);

@@ -1,6 +1,6 @@
 #include "uaz.h"
 
-void drawUaz(Model* uaz, GLuint uazTexture, float lightLevel) {
+void drawUaz(Model* uaz, GLuint uazTexture, float lightLevel, Camera* cam) {
     float uazX = 59.0f;
     float uazZ = 57.0f;
 
@@ -11,6 +11,7 @@ void drawUaz(Model* uaz, GLuint uazTexture, float lightLevel) {
         glRotatef(90.0f,0,1,0);
         draw_model(uaz);
     glPopMatrix();
+    applyUazCollision(cam);
 }
 
 void applyUazCollision(Camera* cam) {

@@ -11,7 +11,7 @@
 /**
  * Draws the UAZ model
  */
-void drawUaz(Model* uaz, GLuint uazTexture, float lightLevel);
+void drawUaz(Model* uaz, GLuint uazTexture, float lightLevel, Camera* cam);
 
 /*
 * Used to apply a collision box to the UAZ model

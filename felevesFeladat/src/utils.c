@@ -3,6 +3,9 @@
 int mapseed = 67;
 
 double pi = 3.14159265358979323846;
+bool doorLocked = true;
+bool showHelp = false;
+bool need_run = true;
 
 Wall houseWalls[NUM_HOUSE_WALLS] = {
     {48.0f, 48.5f, 51.0f, 58.0f}, // hátsó
@@ -125,29 +128,6 @@ void applyWallCollision(Camera* cam, Wall w) {
     }
 }
 
-bool generateBox(Model* cardboardBox, GLuint cardboardTexture, float boxX, float boxZ, bool boxPickedUp, Camera cam, float lightLevel){
-    if (!boxPickedUp) {
-        float time = SDL_GetTicks() / 1000.0f;     
-        float bobbing = sinf(time * 3.0f) * 0.15f; 
-        float rotation = time * 60.0f;            
-
-        glBindTexture(GL_TEXTURE_2D, cardboardTexture);
-        glColor3f(lightLevel, lightLevel, lightLevel);
-
-        float dx = cam.x - boxX;
-        float dz = cam.z - boxZ;
-        float distance = sqrtf(dx * dx + dz * dz);
-
-        glPushMatrix();
-            glTranslatef(boxX, -0.8f + bobbing, boxZ);  
-            glRotatef(rotation, 0, 1, 0); 
-            draw_model(cardboardBox);
-        glPopMatrix();
-
-        if (distance < 1.0f) boxPickedUp = true;
-    }
-    return boxPickedUp;
-}
 
 void drawCottage(Model* walls, Model* roof, Model* door, GLuint wallTexture, GLuint roofTexture, GLuint doorTexture, float lightLevel){
     float cottageX = 50.5;
@@ -185,4 +165,10 @@ void drawCottage(Model* walls, Model* roof, Model* door, GLuint wallTexture, GLu
     glMatrixMode(GL_TEXTURE);
     glPopMatrix();
     glMatrixMode(GL_MODELVIEW);
+    for (int i = 0; i < NUM_HOUSE_WALLS; i++) applyWallCollision(&cam, houseWalls[i]);
+}
+
+void applyBorderCollision(){
+    cam.x = clamp(cam.x, 0.5f, (WIDTH * tileSize) - 0.5f);
+    cam.z = clamp(cam.z, 0.5f, (HEIGHT * tileSize) - 0.5f);
 }

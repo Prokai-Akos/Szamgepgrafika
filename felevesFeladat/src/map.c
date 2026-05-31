@@ -1,5 +1,36 @@
 #include "map.h"
 
+float tileSize = 1.0f;
+
+void drawMap(){
+     for (int i = 0; i < WIDTH; i++) {
+        for (int j = 0; j < HEIGHT; j++) {
+            if (tileMap[i][j] == 0)      glBindTexture(GL_TEXTURE_2D, textures.grass);
+            else if (tileMap[i][j] == 1) glBindTexture(GL_TEXTURE_2D, textures.dirt);
+
+            glBegin(GL_QUADS);
+                glTexCoord2f(0.0f, 0.0f); 
+                glVertex3f(i * tileSize, -1.0f, j * tileSize);
+
+                glTexCoord2f(1.0f, 0.0f); 
+                glVertex3f((i+1) * tileSize, -1.0f, j * tileSize);
+
+                glTexCoord2f(1.0f, 1.0f); 
+                glVertex3f((i+1) * tileSize, -1.0f, (j+1) * tileSize);
+
+                glTexCoord2f(0.0f, 1.0f); 
+                glVertex3f(i * tileSize, -1.0f, (j+1) * tileSize);
+            glEnd();
+        }
+    }
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void displayCoordinatesInTerminal(Camera* cam){
+    printf("X: %6.2f | Y: %6.2f | Z: %6.2f\r", cam->x, cam->y, cam->z);
+    fflush(stdout);
+}
+
 int tileMap[WIDTH][HEIGHT] = {
     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,

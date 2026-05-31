@@ -1,4 +1,4 @@
-#include "includes/loadTextures.h"
+#include "loadTextures.h"
 
 Textures textures;
 

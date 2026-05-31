@@ -10,7 +10,9 @@ void initTrees(){
     }
 }
 
-void drawTrees(Model* tree, GLuint texture, int treeCount, float centerX, float centerZ, Camera* cam) {
+void drawTrees(Model* tree, GLuint texture, Camera* cam) {
+    float centerX = (WIDTH * tileSize) / 2.0f;
+    float centerZ = (HEIGHT * tileSize) / 2.0f;
     glBindTexture(GL_TEXTURE_2D, texture);
 
     // Átlátszóság bekapcsolása (hogy ne legyen fekete/szürke kerete a leveleknek)

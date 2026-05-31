@@ -22,6 +22,8 @@
 #include "tree.h"
 #include "uaz.h"
 #include "loadTextures.h"
+#include "engine.h"
+#include "box.h"
 
 //includes for model loader from gitlab repo
 #include "obj/include/draw.h"
@@ -36,6 +38,9 @@ typedef struct {
 } Wall;
 
 extern int mapseed;
+extern bool showHelp;
+extern bool need_run; 
+extern bool doorLocked;
 
 #define NUM_HOUSE_WALLS 5
 extern Wall houseWalls[NUM_HOUSE_WALLS];
@@ -47,7 +52,6 @@ extern Wall doorCollision;//zárt ajtóhoz
  * i didnt want to see the error so i just did it this way 
  */
 extern double pi;
-
 
 /*
 *Used for displaying the help menu
@@ -66,16 +70,14 @@ void enableFog();
 void applyWallCollision(Camera* cam, Wall w);
 
 /**
- * Generates the box into a random position on the map, 
- * implements checking if the box is picked up already
- */
-bool generateBox(Model* cardboardBox, GLuint cardboardTexture, float boxX, float boxZ, bool boxPickedUp, Camera cam, float lightLevel);
-
-
-/**
  * Draws the entire cottage, walls, roof, door
  * AI was used here
  */
 void drawCottage(Model* walls, Model* roof, Model* door, GLuint wallTexture, GLuint roofTexture, GLuint doorTexture, float lightLevel);
+
+/**
+ * Used for applying a collision box with clamp so the player can't wander out of the map limits
+ */
+void applyBorderCollision();
 
 #endif

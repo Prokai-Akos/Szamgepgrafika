@@ -21,9 +21,9 @@ extern Tree forest[maxTrees];
 void initTrees();
 
 /**
- * Displays the trees
+ * Displays the trees, also applies collisions to them
  */
-void drawTrees(Model* tree, GLuint texture, int treeCount, float centerX, float centerZ, Camera* cam);
+void drawTrees(Model* tree, GLuint texture, Camera* cam);
     
 /**
  * Ütközésvizsgálat egy kör alapú objektummal.
