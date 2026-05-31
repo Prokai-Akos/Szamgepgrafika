@@ -4,6 +4,13 @@ Repository for the class "Számítógépi grafika" at University of Miskolc
 # Aims
 The Aim of this repository is to serve as the main place where coursework and assignements are tracked and where the complete versions will be placed.
 -----------------------------------------------------------------------
+# How to play?
+1. Clone the repository
+2. Go to the link and download the "assets" folder
+3. Unzip the folder, and copy "assets" folder into "felevesFeladat"
+4. Open the terminal and write make
+5. The game will open and you can play
+-----------------------------------------------------------------------
 # A megvalósított játék
 A játékos egy pálya szélén egy földúton kezd, fákkal körülvéve. A földúton lát egy házat egy UAZ-452-essel mellette. A játékos felfedezi hogy az ajtó zárva van, ezért meg kell próbálnia másképpen bejutnia az épületbe. Az épületben megtalálja az UAZ kulcsát és belülről az ajtót is ki tudja nyitni. Megpróbálja beindítani az UAZ-t viszont a kuplung beesik, a játékos rájön hogy hiányzik a kuplung mechanizmusa, így elindul az erődben keresgélni. Hirtelen köd lesz így nehezebb látási viszonyok mellett kell megkeresnie a kuplungot. Miután a játékos megtalálja a kuplungot, ezután megtudja szerelni az UAZ-t és így a játék véget ér.
 -----------------------------------------------------------------------
@@ -19,13 +26,3 @@ Az alkatrészek összegyűjtése után a játékos visszatér a helyi kisboltba,
 Az alkatrészeket a játékos átadja a bölcs öregeknek. Ezután a játék vége egy cutscene, ahol az UAZ-452-es
 gépjármű annyira boldog lesz az új alkatrészektől hogy elkezd le fel rúgózni.
 -----------------------------------------------------------------------
-# Technikai elképzelések
-Fizika: Az UAZ-452-es gépjármű rúgózása
-Részecskerendszer: Füst és eső
-Enviroment mapping: A fű textúrája kint készült kép lenne, ugyanígy a fák is.
------------------------------------------------------------------------
-# A választott plussz feladatok
-
--Köd: ködhatás megvalósítva
--Ütközésvizsgálat: van bounding box a fákon, házon, UAZ-on, falakon.
--Részecskerendszerek: van particle rendszer eső formájában, dinamikusan a kamera köré generálja az esőcseppeket és lefelé mozgatja őket
